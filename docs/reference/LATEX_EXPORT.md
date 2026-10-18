@@ -8,6 +8,7 @@ Technical reference for the **Copy as LaTeX** feature ([issue #165](https://gith
 
 - [Overview](#overview)
 - [Supported Packages](#supported-packages)
+- [Installing TeX](#installing-tex)
 - [Output Modes](#output-modes)
 - [Option Mapping](#option-mapping)
 - [Validation and Safety](#validation-and-safety)
@@ -25,6 +26,8 @@ The LaTeX exporter turns the current position into ready-to-paste markup for the
 - Board orientation (flip) is carried into the markup
 - Coordinate visibility is carried into the markup
 - Snippet or full compilable document
+- Four diagram sizes: `tiny`, `small`, `normal`, `large` (10/15/20/30 pt per square)
+- Side-to-move marker on or off (`chessboard` only)
 - Out of scope for this release: move lists, PDF generation, `xskak`, `chessfss`
 
 ---
@@ -60,6 +63,89 @@ Extra keys are added only when they deviate from the package defaults, and the c
 
 ---
 
+## Installing TeX
+
+The exported markup needs a TeX distribution that includes `skak` and `chessboard`. A minimal installation is not enough, because both packages load helpers from larger collections:
+
+| Package      | Also needs                                                   |
+| ------------ | ------------------------------------------------------------ |
+| `skak`       | `lambda.sty` (TeX Live package `lambda-lists`)               |
+| `chessboard` | `xifthen.sty` and `pgf` (TeX Live packages `xifthen`, `pgf`) |
+
+Both compile with `pdflatex` and can be loaded side by side in one document.
+
+### No installation
+
+[Overleaf](https://www.overleaf.com) ships both packages. Create a project, paste the full-document output and compile.
+
+### Linux
+
+Pick the family your distribution is based on:
+
+**Debian, Ubuntu, Linux Mint and other Debian derivatives**
+
+```bash
+sudo apt install texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-pictures texlive-games texlive-plain-generic
+```
+
+**Fedora, RHEL, Rocky Linux, AlmaLinux and other Fedora derivatives**
+
+```bash
+sudo dnf install texlive-scheme-basic texlive-skak texlive-chessboard texlive-lambda-lists texlive-xifthen texlive-pgf
+```
+
+**Arch Linux, Manjaro, EndeavourOS and other Arch derivatives**
+
+```bash
+sudo pacman -S texlive-basic texlive-latex texlive-latexrecommended texlive-latexextra texlive-pictures texlive-games texlive-plaingeneric
+```
+
+If disk space is not a concern, each family also offers everything in one step: `texlive-full` on Debian, `texlive-scheme-full` on Fedora and the `texlive` package group on Arch (`sudo pacman -S texlive`).
+
+Any distribution can use the upstream installer from [tug.org/texlive](https://tug.org/texlive/), then:
+
+```bash
+sudo tlmgr install skak chessboard
+```
+
+`tlmgr` resolves `lambda-lists`, `xifthen` and `pgf` on its own.
+
+### Windows
+
+Install [MiKTeX](https://miktex.org/download), which downloads missing packages the first time a document needs them:
+
+```powershell
+winget install MiKTeX.MiKTeX
+```
+
+Choose **Always install missing packages on-the-fly** during setup (or later under MiKTeX Console → Settings), then compile as usual. Alternatively install TeX Live with the `install-tl-windows.exe` installer from [tug.org/texlive](https://tug.org/texlive/) and run `tlmgr install skak chessboard`.
+
+### macOS
+
+Install [MacTeX](https://tug.org/mactex/) with Homebrew. The full distribution already contains both packages:
+
+```bash
+brew install --cask mactex-no-gui
+```
+
+For a smaller download, install BasicTeX and add the two packages. Open a new terminal afterwards so `pdflatex` is on the `PATH`:
+
+```bash
+brew install --cask basictex
+sudo tlmgr update --self
+sudo tlmgr install skak chessboard
+```
+
+### Check the installation
+
+```bash
+kpsewhich skak.sty chessboard.sty
+```
+
+Both paths must be printed. If one is missing, install the package from the list above. A missing helper shows up while compiling as `File 'lambda.sty' not found` (skak) or `File 'xifthen.sty' not found` (chessboard).
+
+---
+
 ## Output Modes
 
 | Mode       | Result                                                        |
@@ -71,12 +157,14 @@ Extra keys are added only when they deviate from the package defaults, and the c
 
 ## Option Mapping
 
-| Board state         | skak                           | chessboard     |
-| ------------------- | ------------------------------ | -------------- |
-| Default orientation | `\showboard`                   | —              |
-| Flipped             | `\showinverseboard`            | `inverse=true` |
-| Coordinates visible | —                              | —              |
-| Coordinates hidden  | `\notationoff` … `\notationon` | `label=false`  |
+| Board state            | skak                           | chessboard           |
+| ---------------------- | ------------------------------ | -------------------- |
+| Default orientation    | `\showboard`                   | —                    |
+| Flipped                | `\showinverseboard`            | `inverse=true`       |
+| Coordinates visible    | —                              | —                    |
+| Coordinates hidden     | `\notationoff` … `\notationon` | `label=false`        |
+| Size other than normal | `\smallboard` … `\normalboard` | `boardfontsize=15pt` |
+| Side-to-move hidden    | — (needs PostScript)           | `showmover=false`    |
 
 ---
 
@@ -95,7 +183,7 @@ The allowlist is what keeps `\`, `{`, `}`, `%`, and `$` out of the markup, so a 
 ## API
 
 ```ts
-import { generateBoardLatex } from '@utils';
+import { generateBoardLatex } from '@chessviewer-org/chess-viewer';
 
 const latex = generateBoardLatex({
   fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -106,15 +194,17 @@ const latex = generateBoardLatex({
 });
 ```
 
-| Field          | Type                      | Default     |
-| -------------- | ------------------------- | ----------- |
-| `fen`          | `string`                  | required    |
-| `latexPackage` | `'skak' \| 'chessboard'`  | `'skak'`    |
-| `flipped`      | `boolean`                 | `false`     |
-| `showCoords`   | `boolean`                 | `true`      |
-| `mode`         | `'snippet' \| 'document'` | `'snippet'` |
+| Field          | Type                                       | Default     |
+| -------------- | ------------------------------------------ | ----------- |
+| `fen`          | `string`                                   | required    |
+| `latexPackage` | `'skak' \| 'chessboard'`                   | `'skak'`    |
+| `flipped`      | `boolean`                                  | `false`     |
+| `showCoords`   | `boolean`                                  | `true`      |
+| `mode`         | `'snippet' \| 'document'`                  | `'snippet'` |
+| `boardSize`    | `'tiny' \| 'small' \| 'normal' \| 'large'` | `'normal'`  |
+| `showMover`    | `boolean`                                  | `true`      |
 
-Also exported: `LATEX_PACKAGES`, `LATEX_PACKAGE_META` and `isLatexPackage`. The clipboard write reuses the existing `useCopyToClipboard` hook.
+Also exported: `LATEX_PACKAGES`, `LATEX_PACKAGE_META`, `LATEX_BOARD_SIZES`, `LATEX_BOARD_SIZE_PT`, `isLatexPackage` and `isLatexBoardSize`. The clipboard write reuses the existing `useCopyToClipboard` hook.
 
 ---
 
@@ -131,8 +221,8 @@ Both pass the live board orientation and coordinate setting into the dialog.
 
 | File                                                                   | Role                             |
 | ---------------------------------------------------------------------- | -------------------------------- |
-| `src/shared/utils/latexExporter.ts`                                    | Markup generation and validation |
+| `@chessviewer-org/chess-viewer` (`src/latex.ts`)                       | Markup generation and validation |
 | `src/components/features/Latex/LatexExportDialog.tsx`                  | Package/mode picker and preview  |
 | `src/components/interactions/Editor/components/CommandBar.tsx`         | Editor entry point               |
 | `src/pages/AdvancedFENInputPage/components/InteractiveBoardColumn.tsx` | Advanced FEN entry point         |
-| `tests/latexExporter.test.ts`                                          | 32 unit tests                    |
+| `@chessviewer-org/chess-viewer` (`src/latex.test.ts`)                  | Unit tests                       |
