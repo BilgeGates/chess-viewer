@@ -1,10 +1,26 @@
 import { memo } from 'react';
 
-import { Eye, Layers, Monitor, Sparkles, Zap } from '@/assets/icons';
+import {
+  Eye,
+  Layers,
+  Monitor,
+  MousePointer,
+  Shield,
+  Sparkles,
+  Zap
+} from '@/assets/icons';
 
-import { useColorVisionSetting, useReducedMotionSetting } from '@hooks';
+import {
+  useColorVisionSetting,
+  useDragSensitivitySetting,
+  useReducedMotionSetting
+} from '@hooks';
 
-import type { ColorVisionPreference, ReducedMotionPreference } from '@utils';
+import type {
+  ColorVisionPreference,
+  DragSensitivity,
+  ReducedMotionPreference
+} from '@utils';
 import { CustomSelect } from '@ui';
 import { SettingsBlock, SettingsHeading } from './parts';
 
@@ -57,9 +73,32 @@ const REDUCED_MOTION_OPTIONS: Array<{
   }
 ];
 
+const DRAG_SENSITIVITY_OPTIONS: Array<{
+  value: DragSensitivity;
+  label: string;
+  icon: React.ReactNode;
+}> = [
+  {
+    value: 'low',
+    label: 'Low — ignore stray touches',
+    icon: <Shield className="h-4 w-4" />
+  },
+  {
+    value: 'medium',
+    label: 'Medium — balanced',
+    icon: <MousePointer className="h-4 w-4" />
+  },
+  {
+    value: 'high',
+    label: 'High — pick up instantly',
+    icon: <Zap className="h-4 w-4" />
+  }
+];
+
 const AccessibilitySection = memo(function AccessibilitySection() {
   const [colorVision, setColorVision] = useColorVisionSetting();
   const [reducedMotion, setReducedMotion] = useReducedMotionSetting();
+  const [dragSensitivity, setDragSensitivity] = useDragSensitivitySetting();
 
   return (
     <div className="space-y-8 stagger-children">
@@ -148,6 +187,20 @@ const AccessibilitySection = memo(function AccessibilitySection() {
               </ul>
             </div>
           )}
+        </div>
+      </SettingsBlock>
+
+      <SettingsBlock
+        title="Drag sensitivity"
+        description="How far a piece has to move before the board treats it as a drag. Choose Low if accidental touches keep moving pieces on your phone, or High for the most immediate pick-up."
+      >
+        <div className="max-w-xs">
+          <CustomSelect
+            value={dragSensitivity}
+            onChange={setDragSensitivity}
+            options={DRAG_SENSITIVITY_OPTIONS}
+            label="Drag sensitivity"
+          />
         </div>
       </SettingsBlock>
     </div>

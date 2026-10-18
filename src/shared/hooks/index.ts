@@ -5,7 +5,8 @@ export {
   useContrastSetting,
   useEffectiveReducedMotion,
   useReducedMotionPreference,
-  useReducedMotionSetting
+  useReducedMotionSetting,
+  useDragSensitivitySetting
 } from './useA11y';
 export { useChessBoard } from './useChessBoard';
 export {

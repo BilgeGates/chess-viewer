@@ -19,12 +19,15 @@ import {
   type ReducedMotionPreference,
   readReducedMotionPreference,
   isReducedMotionPreference,
+  DRAG_SENSITIVITY_CHANGE_EVENT,
+  DRAG_SENSITIVITY_STORAGE_KEY,
+  type DragSensitivity,
+  readDragSensitivity,
   hydrateFromSync,
   logger,
   resolveReducedMotion
 } from '@utils';
 
-// Helpers
 // Helpers
 function syncFromCloud(
   key: string,
@@ -58,6 +61,41 @@ function syncFromCloud(
   };
 }
 
+export function usePreferenceSetting<T extends string>(
+  key: string,
+  event: string,
+  read: () => T
+): [T, (next: T) => void] {
+  const [pref, setPref] = useState(read);
+
+  useEffect(() => {
+    const sync = () => setPref(read());
+    window.addEventListener(event, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(event, sync);
+      window.removeEventListener('storage', sync);
+    };
+  }, [event, read]);
+
+  const select = useCallback(
+    (next: T) => {
+      setPref(next);
+      try {
+        const value = JSON.stringify(next);
+        window.localStorage.setItem(key, value);
+        syncStorage?.set(key, value);
+        window.dispatchEvent(new Event(event));
+      } catch (err) {
+        logger.error(`${key} save failed:`, err);
+      }
+    },
+    [key, event]
+  );
+
+  return [pref, select];
+}
+
 // Color vision
 export function useColorVision(): void {
   useLayoutEffect(() => {
@@ -89,31 +127,11 @@ export function useColorVisionSetting(): [
   ColorVisionPreference,
   (next: ColorVisionPreference) => void
 ] {
-  const [pref, setPref] = useState(readColorVisionPreference);
-
-  useEffect(() => {
-    const sync = () => setPref(readColorVisionPreference());
-    window.addEventListener(COLOR_VISION_CHANGE_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(COLOR_VISION_CHANGE_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
-
-  const select = useCallback((next: ColorVisionPreference) => {
-    setPref(next);
-    try {
-      const value = JSON.stringify(next);
-      window.localStorage.setItem(COLOR_VISION_STORAGE_KEY, value);
-      syncStorage?.set(COLOR_VISION_STORAGE_KEY, value);
-      window.dispatchEvent(new Event(COLOR_VISION_CHANGE_EVENT));
-    } catch (err) {
-      logger.error('color vision save failed:', err);
-    }
-  }, []);
-
-  return [pref, select];
+  return usePreferenceSetting(
+    COLOR_VISION_STORAGE_KEY,
+    COLOR_VISION_CHANGE_EVENT,
+    readColorVisionPreference
+  );
 }
 
 // Contrast
@@ -147,31 +165,11 @@ export function useContrastSetting(): [
   ContrastPreference,
   (next: ContrastPreference) => void
 ] {
-  const [pref, setPref] = useState(readContrastPreference);
-
-  useEffect(() => {
-    const sync = () => setPref(readContrastPreference());
-    window.addEventListener(CONTRAST_CHANGE_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(CONTRAST_CHANGE_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
-
-  const select = useCallback((next: ContrastPreference) => {
-    setPref(next);
-    try {
-      const value = JSON.stringify(next);
-      window.localStorage.setItem(CONTRAST_STORAGE_KEY, value);
-      syncStorage?.set(CONTRAST_STORAGE_KEY, value);
-      window.dispatchEvent(new Event(CONTRAST_CHANGE_EVENT));
-    } catch (err) {
-      logger.error('contrast save failed:', err);
-    }
-  }, []);
-
-  return [pref, select];
+  return usePreferenceSetting(
+    CONTRAST_STORAGE_KEY,
+    CONTRAST_CHANGE_EVENT,
+    readContrastPreference
+  );
 }
 
 // Reduced motion
@@ -210,31 +208,11 @@ export function useReducedMotionSetting(): [
   ReducedMotionPreference,
   (next: ReducedMotionPreference) => void
 ] {
-  const [pref, setPref] = useState(readReducedMotionPreference);
-
-  useEffect(() => {
-    const sync = () => setPref(readReducedMotionPreference());
-    window.addEventListener(REDUCED_MOTION_CHANGE_EVENT, sync);
-    window.addEventListener('storage', sync);
-    return () => {
-      window.removeEventListener(REDUCED_MOTION_CHANGE_EVENT, sync);
-      window.removeEventListener('storage', sync);
-    };
-  }, []);
-
-  const select = useCallback((next: ReducedMotionPreference) => {
-    setPref(next);
-    try {
-      const value = JSON.stringify(next);
-      window.localStorage.setItem(REDUCED_MOTION_STORAGE_KEY, value);
-      syncStorage?.set(REDUCED_MOTION_STORAGE_KEY, value);
-      window.dispatchEvent(new Event(REDUCED_MOTION_CHANGE_EVENT));
-    } catch (err) {
-      logger.error('reduced motion save failed:', err);
-    }
-  }, []);
-
-  return [pref, select];
+  return usePreferenceSetting(
+    REDUCED_MOTION_STORAGE_KEY,
+    REDUCED_MOTION_CHANGE_EVENT,
+    readReducedMotionPreference
+  );
 }
 
 export function useEffectiveReducedMotion(): boolean {
@@ -257,4 +235,16 @@ export function useEffectiveReducedMotion(): boolean {
   }, []);
 
   return reduced;
+}
+
+// Drag sensitivity
+export function useDragSensitivitySetting(): [
+  DragSensitivity,
+  (next: DragSensitivity) => void
+] {
+  return usePreferenceSetting(
+    DRAG_SENSITIVITY_STORAGE_KEY,
+    DRAG_SENSITIVITY_CHANGE_EVENT,
+    readDragSensitivity
+  );
 }

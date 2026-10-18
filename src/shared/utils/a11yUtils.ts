@@ -1,5 +1,24 @@
 import { safeJSONParse } from '@chessviewer-org/chess-viewer';
 
+// Helpers
+export function readPreference<T extends string>(
+  key: string,
+  isValid: (value: unknown) => value is T,
+  fallback: T
+): T {
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (raw) {
+      const parsed = safeJSONParse<unknown>(raw, null);
+      if (isValid(parsed)) return parsed;
+      if (isValid(raw)) return raw;
+    }
+  } catch {
+    return fallback;
+  }
+  return fallback;
+}
+
 // Color vision
 export type ColorVisionPreference =
   | 'none'
@@ -24,17 +43,11 @@ export function isColorVisionPreference(
 }
 
 export function readColorVisionPreference(): ColorVisionPreference {
-  try {
-    const raw = window.localStorage.getItem(COLOR_VISION_STORAGE_KEY);
-    if (raw) {
-      const parsed = safeJSONParse<ColorVisionPreference | null>(raw, null);
-      if (isColorVisionPreference(parsed)) return parsed;
-      if (isColorVisionPreference(raw)) return raw;
-    }
-  } catch {
-    return DEFAULT_COLOR_VISION;
-  }
-  return DEFAULT_COLOR_VISION;
+  return readPreference(
+    COLOR_VISION_STORAGE_KEY,
+    isColorVisionPreference,
+    DEFAULT_COLOR_VISION
+  );
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -124,17 +137,11 @@ export function isContrastPreference(
 }
 
 export function readContrastPreference(): ContrastPreference {
-  try {
-    const raw = window.localStorage.getItem(CONTRAST_STORAGE_KEY);
-    if (raw) {
-      const parsed = safeJSONParse<ContrastPreference | null>(raw, null);
-      if (isContrastPreference(parsed)) return parsed;
-      if (isContrastPreference(raw)) return raw;
-    }
-  } catch {
-    return DEFAULT_CONTRAST;
-  }
-  return DEFAULT_CONTRAST;
+  return readPreference(
+    CONTRAST_STORAGE_KEY,
+    isContrastPreference,
+    DEFAULT_CONTRAST
+  );
 }
 
 export function applyContrast(preference: ContrastPreference): void {
@@ -162,17 +169,11 @@ export function isReducedMotionPreference(
 }
 
 export function readReducedMotionPreference(): ReducedMotionPreference {
-  try {
-    const raw = window.localStorage.getItem(REDUCED_MOTION_STORAGE_KEY);
-    if (raw) {
-      const parsed = safeJSONParse<ReducedMotionPreference | null>(raw, null);
-      if (isReducedMotionPreference(parsed)) return parsed;
-      if (isReducedMotionPreference(raw)) return raw;
-    }
-  } catch {
-    return DEFAULT_REDUCED_MOTION;
-  }
-  return DEFAULT_REDUCED_MOTION;
+  return readPreference(
+    REDUCED_MOTION_STORAGE_KEY,
+    isReducedMotionPreference,
+    DEFAULT_REDUCED_MOTION
+  );
 }
 
 function prefersReducedMotionOS(): boolean {
@@ -200,4 +201,42 @@ export function applyReducedMotion(preference: ReducedMotionPreference): void {
   } else {
     root.removeAttribute('data-reduced-motion');
   }
+}
+
+// Drag sensitivity
+export type DragSensitivity = 'low' | 'medium' | 'high';
+
+const DEFAULT_DRAG_SENSITIVITY: DragSensitivity = 'medium';
+
+export const DRAG_SENSITIVITY_STORAGE_KEY = 'cv_drag_sensitivity';
+export const DRAG_SENSITIVITY_CHANGE_EVENT = 'cv-drag-sensitivity-change';
+
+const TOUCH_DRAG_THRESHOLD_PX: Record<DragSensitivity, number> = {
+  low: 18,
+  medium: 10,
+  high: 5
+};
+
+const MOUSE_DRAG_THRESHOLD_PX: Record<DragSensitivity, number> = {
+  low: 8,
+  medium: 4,
+  high: 2
+};
+
+export function isDragSensitivity(value: unknown): value is DragSensitivity {
+  return value === 'low' || value === 'medium' || value === 'high';
+}
+
+export function readDragSensitivity(): DragSensitivity {
+  return readPreference(
+    DRAG_SENSITIVITY_STORAGE_KEY,
+    isDragSensitivity,
+    DEFAULT_DRAG_SENSITIVITY
+  );
+}
+
+export function dragThreshold(pointerType: string): number {
+  const table =
+    pointerType === 'mouse' ? MOUSE_DRAG_THRESHOLD_PX : TOUCH_DRAG_THRESHOLD_PX;
+  return table[readDragSensitivity()];
 }
