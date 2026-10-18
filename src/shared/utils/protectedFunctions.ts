@@ -64,10 +64,12 @@ export async function invokeProtected<T>(
       const message =
         (data && typeof data['message'] === 'string' && data['message']) ||
         'request_failed';
-      console.error(
-        `[invokeProtected] ${name} -> ${res.status} at ${BASE_URL}/functions/v1/${name}:`,
-        data
-      );
+      if (res.status >= 500) {
+        console.error(
+          `[invokeProtected] ${name} -> ${res.status} at ${BASE_URL}/functions/v1/${name}:`,
+          data
+        );
+      }
       return { data: null, error: { status: res.status, message } };
     }
 

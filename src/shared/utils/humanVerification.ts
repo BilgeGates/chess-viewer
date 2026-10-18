@@ -25,11 +25,13 @@ declare global {
 const SCRIPT_SRC =
   'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onloadTurnstileCallback&render=explicit';
 const CONTAINER_ID = 'cv-turnstile-container';
+const TOKEN_TIMEOUT_MS = 60_000;
 
 // State
 let scriptPromise: Promise<void> | null = null;
 let widgetId: string | null = null;
 let pendingResolve: ((token: string | null) => void) | null = null;
+let inFlight: Promise<boolean> | null = null;
 let verifiedLocally = false;
 
 // Helpers
@@ -76,34 +78,33 @@ async function ensureWidget(): Promise<string> {
     sitekey,
     execution: 'execute',
     appearance: 'interaction-only',
-    callback: (token) => {
-      pendingResolve?.(token);
-      pendingResolve = null;
-    },
-    'error-callback': () => {
-      pendingResolve?.(null);
-      pendingResolve = null;
-    },
-    'expired-callback': () => {
-      pendingResolve?.(null);
-      pendingResolve = null;
-    }
+    callback: settle,
+    'error-callback': () => settle(null),
+    'expired-callback': () => settle(null)
   });
   return widgetId;
 }
 
-// Service
-export async function verifyHuman(): Promise<boolean> {
-  if (verifiedLocally) return true;
+function settle(token: string | null) {
+  pendingResolve?.(token);
+  pendingResolve = null;
+}
 
-  try {
-    const id = await ensureWidget();
+function requestToken(id: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => settle(null), TOKEN_TIMEOUT_MS);
+    pendingResolve = (token) => {
+      clearTimeout(timer);
+      resolve(token);
+    };
     window.turnstile!.reset(id);
+    window.turnstile!.execute(id);
+  });
+}
 
-    const token = await new Promise<string | null>((resolve) => {
-      pendingResolve = resolve;
-      window.turnstile!.execute(id);
-    });
+async function runVerification(): Promise<boolean> {
+  try {
+    const token = await requestToken(await ensureWidget());
     if (!token) return false;
 
     const { data, error } = await invokeProtected<{ verified: boolean }>(
@@ -117,4 +118,13 @@ export async function verifyHuman(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// Service
+export function verifyHuman(): Promise<boolean> {
+  if (verifiedLocally) return Promise.resolve(true);
+  inFlight ??= runVerification().finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
 }
