@@ -3,14 +3,16 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { Check, Code2, Copy } from '@/assets/icons';
 
 import {
+  LATEX_BOARD_SIZES,
   LATEX_PACKAGES,
   LATEX_PACKAGE_META,
+  type LatexBoardSize,
   type LatexOutputMode,
   type LatexPackage,
   generateBoardLatex
 } from '@utils';
 import { useCopyToClipboard } from '@hooks';
-import { ModalShell } from '@ui';
+import { ModalShell, Switch } from '@ui';
 
 // Constants
 const MODES: { value: LatexOutputMode; label: string }[] = [
@@ -46,6 +48,8 @@ export const LatexExportDialog = memo(function LatexExportDialog({
 }: LatexExportDialogProps) {
   const [latexPackage, setLatexPackage] = useState<LatexPackage>('skak');
   const [mode, setMode] = useState<LatexOutputMode>('snippet');
+  const [boardSize, setBoardSize] = useState<LatexBoardSize>('normal');
+  const [showMover, setShowMover] = useState(true);
   const [copied, copy] = useCopyToClipboard();
 
   useEffect(() => {
@@ -60,7 +64,9 @@ export const LatexExportDialog = memo(function LatexExportDialog({
           latexPackage,
           flipped,
           showCoords,
-          mode
+          mode,
+          boardSize,
+          showMover
         }),
         error: null
       };
@@ -70,7 +76,7 @@ export const LatexExportDialog = memo(function LatexExportDialog({
         error: err instanceof Error ? err.message : 'Could not build LaTeX'
       };
     }
-  }, [fen, latexPackage, flipped, showCoords, mode]);
+  }, [fen, latexPackage, flipped, showCoords, mode, boardSize, showMover]);
 
   return (
     <ModalShell
@@ -132,6 +138,42 @@ export const LatexExportDialog = memo(function LatexExportDialog({
             ))}
           </div>
         </div>
+
+        <div className="space-y-2">
+          <h4 className="text-[10px] uppercase font-bold tracking-wider text-text-muted">
+            Diagram size
+          </h4>
+          <div
+            role="group"
+            aria-label="Diagram size"
+            className="flex w-full rounded-lg border border-border/60 overflow-hidden"
+          >
+            {LATEX_BOARD_SIZES.map((size, index) => (
+              <button
+                key={size}
+                type="button"
+                aria-pressed={boardSize === size}
+                onClick={() => setBoardSize(size)}
+                className={`${segmentButton(boardSize === size)} capitalize ${
+                  index < LATEX_BOARD_SIZES.length - 1
+                    ? 'border-r border-border/60'
+                    : ''
+                }`}
+              >
+                {size}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {latexPackage === 'chessboard' && (
+          <Switch
+            label="Side-to-move marker"
+            description="Draw the small square beside the board that shows who is to move."
+            checked={showMover}
+            onChange={setShowMover}
+          />
+        )}
 
         {error ? (
           <p role="alert" className="text-xs text-error">
