@@ -13,7 +13,6 @@ interface DraggablePieceProps {
   isFromPalette?: boolean;
   size?: string;
   disabled?: boolean;
-  cellSize?: number;
 }
 
 export const DraggablePiece = memo(function DraggablePiece({
@@ -23,8 +22,7 @@ export const DraggablePiece = memo(function DraggablePiece({
   col,
   isFromPalette = false,
   size = '85%',
-  disabled = false,
-  cellSize = 64
+  disabled = false
 }: DraggablePieceProps) {
   const pieceKey = piece ? getPieceKey(piece) : null;
 
@@ -41,7 +39,6 @@ export const DraggablePiece = memo(function DraggablePiece({
 
   const { isDragging, onPointerDown } = useDraggable({
     data: dragData,
-    cellSize,
     imageSrc: pieceImage?.src ?? null,
     disabled: disabled || !piece
   });
@@ -65,7 +62,7 @@ export const DraggablePiece = memo(function DraggablePiece({
           ? 'none'
           : 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1)',
         contain: 'strict',
-        touchAction: disabled ? 'auto' : 'pan-y',
+        touchAction: disabled ? 'auto' : 'none',
         WebkitUserSelect: 'none',
         userSelect: 'none'
       }}

@@ -1,18 +1,22 @@
 import { createContext, useCallback, useContext, useRef } from 'react';
 import type { ChessDragData } from '@constants';
+import { dragThreshold } from '@utils';
 
-const DRAG_THRESHOLD = 5;
+export const DROP_ID_ATTR = 'data-drop-id';
+export const DRAG_OVER_ATTR = 'data-drag-over';
+
+const TOUCH_GHOST_SCALE = 1.4;
 
 export interface DragSession {
   dragData: ChessDragData;
   ghost: HTMLDivElement;
   halfSize: number;
+  pointerId: number;
 }
 
-export interface DragContextValue {
-  active: ChessDragData | null;
-  overId: string | null;
-  _startDrag(session: DragSession): void;
+export interface DragApi {
+  startDrag(session: DragSession): void;
+  isDragging(): boolean;
   registerDropTarget(
     id: string,
     el: HTMLElement,
@@ -21,38 +25,67 @@ export interface DragContextValue {
   unregisterDropTarget(id: string): void;
 }
 
-export const DragCtx = createContext<DragContextValue>({
-  active: null,
-  overId: null,
-  _startDrag: () => {},
+export const DragApiCtx = createContext<DragApi>({
+  startDrag: () => {},
+  isDragging: () => false,
   registerDropTarget: () => {},
   unregisterDropTarget: () => {}
 });
 
-export function useDragContext() {
-  return useContext(DragCtx);
+export const DragActiveCtx = createContext<ChessDragData | null>(null);
+
+export function useDragActive() {
+  return useContext(DragActiveCtx);
+}
+
+function createGhost(src: string, size: number, x: number, y: number) {
+  const half = size / 2;
+  const ghost = document.createElement('div');
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.style.cssText = [
+    'position:fixed',
+    'top:0',
+    'left:0',
+    `width:${size}px`,
+    `height:${size}px`,
+    'pointer-events:none',
+    'z-index:9999',
+    'will-change:transform',
+    'contain:strict',
+    `transform:translate3d(${x - half}px,${y - half}px,0)`
+  ].join(';');
+
+  const img = document.createElement('img');
+  img.src = src;
+  img.draggable = false;
+  img.style.cssText = [
+    'width:100%',
+    'height:100%',
+    'object-fit:contain',
+    'filter:drop-shadow(0 4px 8px rgba(0,0,0,0.35))',
+    'pointer-events:none',
+    'user-select:none',
+    '-webkit-user-select:none'
+  ].join(';');
+  ghost.appendChild(img);
+  return { ghost, half };
 }
 
 interface UseDraggableOptions {
   data: ChessDragData;
-  cellSize: number;
   imageSrc: string | null;
   disabled?: boolean;
 }
 
 export function useDraggable({
   data,
-  cellSize,
   imageSrc,
   disabled
 }: UseDraggableOptions) {
-  const { active, _startDrag } = useDragContext();
+  const active = useDragActive();
+  const { startDrag, isDragging: dragInProgress } = useContext(DragApiCtx);
   const dataRef = useRef(data);
   dataRef.current = data;
-  const imageSrcRef = useRef(imageSrc);
-  imageSrcRef.current = imageSrc;
-  const disabledRef = useRef(disabled);
-  disabledRef.current = disabled;
 
   const isDragging =
     !!active &&
@@ -63,65 +96,14 @@ export function useDraggable({
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {
-      if (disabled || !imageSrc) return;
+      if (disabled || !imageSrc || !e.isPrimary || dragInProgress()) return;
       if (e.pointerType === 'mouse' && e.button !== 0) return;
 
       const el = e.currentTarget as HTMLElement;
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const pointerId = e.pointerId;
-      let started = false;
+      const { clientX: startX, clientY: startY, pointerId } = e;
+      const threshold = dragThreshold(e.pointerType);
 
       el.setPointerCapture(pointerId);
-
-      const begin = (clientX: number, clientY: number) => {
-        const src = imageSrcRef.current;
-        if (disabledRef.current || !src) return;
-        started = true;
-        const size = cellSize * 0.9;
-        const half = size / 2;
-
-        const ghost = document.createElement('div');
-        ghost.setAttribute('aria-hidden', 'true');
-        ghost.style.cssText = [
-          `position:fixed`,
-          `top:0`,
-          `left:0`,
-          `width:${size}px`,
-          `height:${size}px`,
-          `pointer-events:none`,
-          `z-index:9999`,
-          `will-change:transform`,
-          `transform:translate(${clientX - half}px,${clientY - half}px)`
-        ].join(';');
-
-        const img = document.createElement('img');
-        img.src = src;
-        img.draggable = false;
-        img.style.cssText = [
-          'width:100%',
-          'height:100%',
-          'object-fit:contain',
-          'opacity:0.9',
-          'filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))',
-          'pointer-events:none',
-          'user-select:none',
-          '-webkit-user-select:none'
-        ].join(';');
-        ghost.appendChild(img);
-
-        _startDrag({ dragData: dataRef.current, ghost, halfSize: half });
-      };
-
-      const onMove = (ev: PointerEvent) => {
-        if (started) return;
-        if (
-          Math.hypot(ev.clientX - startX, ev.clientY - startY) <= DRAG_THRESHOLD
-        )
-          return;
-        begin(ev.clientX, ev.clientY);
-        if (started) ev.preventDefault();
-      };
 
       const cleanup = () => {
         el.removeEventListener('pointermove', onMove);
@@ -131,11 +113,33 @@ export function useDraggable({
           el.releasePointerCapture(pointerId);
       };
 
+      const onMove = (ev: PointerEvent) => {
+        if (ev.pointerId !== pointerId) return;
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < threshold)
+          return;
+        ev.preventDefault();
+        cleanup();
+        const { width, height } = el.getBoundingClientRect();
+        const scale = ev.pointerType === 'mouse' ? 1 : TOUCH_GHOST_SCALE;
+        const { ghost, half } = createGhost(
+          imageSrc,
+          Math.max(width, height) * scale,
+          ev.clientX,
+          ev.clientY
+        );
+        startDrag({
+          dragData: dataRef.current,
+          ghost,
+          halfSize: half,
+          pointerId
+        });
+      };
+
       el.addEventListener('pointermove', onMove, { passive: false });
       el.addEventListener('pointerup', cleanup);
       el.addEventListener('pointercancel', cleanup);
     },
-    [disabled, imageSrc, cellSize, _startDrag]
+    [disabled, imageSrc, startDrag, dragInProgress]
   );
 
   return { isDragging, onPointerDown };
@@ -147,11 +151,11 @@ interface UseDroppableOptions {
 }
 
 export function useDroppable({ id, data }: UseDroppableOptions) {
-  const { overId, registerDropTarget, unregisterDropTarget } = useDragContext();
+  const { registerDropTarget, unregisterDropTarget } = useContext(DragApiCtx);
   const stateRef = useRef({ data, registerDropTarget, unregisterDropTarget });
   stateRef.current = { data, registerDropTarget, unregisterDropTarget };
 
-  const setNodeRef = useCallback(
+  return useCallback(
     (el: HTMLElement | null) => {
       if (el) {
         stateRef.current.registerDropTarget(id, el, stateRef.current.data);
@@ -161,6 +165,4 @@ export function useDroppable({ id, data }: UseDroppableOptions) {
     },
     [id]
   );
-
-  return { isOver: overId === id, setNodeRef };
 }

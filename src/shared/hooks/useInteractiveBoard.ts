@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { ChessBoard, isChessBoard, PieceSymbol } from '@app-types';
 
@@ -23,6 +23,22 @@ const EMPTY_PLACEMENT = boardToFEN(createEmptyBoard());
 function metadataOf(fen: string, fallback = DEFAULT_META): string {
   const parts = fen.trim().split(/\s+/);
   return parts.length > 1 ? parts.slice(1).join(' ') : fallback;
+}
+
+function isValidFen(fen: string): boolean {
+  return !!fen && validateFEN(fen);
+}
+
+function boardOf(fen: string): ChessBoard {
+  try {
+    if (isValidFen(fen)) {
+      const parsed = parseFEN(fen);
+      if (isChessBoard(parsed)) return parsed;
+    }
+  } catch (err) {
+    logger.error('Invalid initial FEN:', err);
+  }
+  return createEmptyBoard();
 }
 
 // Types
@@ -53,26 +69,12 @@ export function useInteractiveBoard(
   onFenChange?: (fen: string) => void
 ): UseInteractiveBoardResult {
   // State
-  const [board, setBoard] = useState<ChessBoard>(() => createEmptyBoard());
+  const [board, setBoard] = useState<ChessBoard>(() => boardOf(initialFen));
   const [past, setPast] = useState<ChessBoard[]>([]);
   const [future, setFuture] = useState<ChessBoard[]>([]);
-  const [metadata, setMetadata] = useState(DEFAULT_META);
-
-  useEffect(() => {
-    try {
-      if (initialFen && validateFEN(initialFen)) {
-        setMetadata(metadataOf(initialFen));
-        const parsed = parseFEN(initialFen);
-        if (isChessBoard(parsed)) {
-          setBoard(parsed);
-          setPast([]);
-          setFuture([]);
-        }
-      }
-    } catch (err) {
-      logger.error('Invalid initial FEN:', err);
-    }
-  }, [initialFen]);
+  const [metadata, setMetadata] = useState(() =>
+    isValidFen(initialFen) ? metadataOf(initialFen) : DEFAULT_META
+  );
 
   // Actions
   const commitMove = useCallback(
@@ -99,6 +101,12 @@ export function useInteractiveBoard(
       toCol: number,
       isFromPalette: boolean
     ) => {
+      if (
+        isFromPalette
+          ? board[toRow]?.[toCol] === piece
+          : fromRow === toRow && fromCol === toCol
+      )
+        return;
       const next =
         !isFromPalette && fromRow !== undefined && fromCol !== undefined
           ? movePiece(board, [fromRow, fromCol], [toRow, toCol])

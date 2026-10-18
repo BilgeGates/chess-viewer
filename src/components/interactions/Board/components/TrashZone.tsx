@@ -1,7 +1,6 @@
 import { memo } from 'react';
 
-import type { ChessDragData } from '@constants';
-import { useDragContext, useDroppable } from '@hooks';
+import { useDragActive, useDroppable } from '@hooks';
 
 interface TrashZoneProps {
   className?: string;
@@ -10,13 +9,10 @@ interface TrashZoneProps {
 export const TrashZone = memo(function TrashZone({
   className = ''
 }: TrashZoneProps) {
-  const { active } = useDragContext();
-  const dragData = active as ChessDragData | null;
-  const canDrop = !!active && !dragData?.isFromPalette;
+  const active = useDragActive();
+  const canDrop = !!active && !active.isFromPalette;
 
-  const { setNodeRef, isOver } = useDroppable({ id: 'trash', data: {} });
-
-  const isActive = isOver && canDrop;
+  const setNodeRef = useDroppable({ id: 'trash', data: {} });
 
   return (
     <div
@@ -26,11 +22,9 @@ export const TrashZone = memo(function TrashZone({
         rounded-lg border-2 overflow-hidden
         transition-[background-color,color,box-shadow,flex-grow,transform] duration-200 ease-out
         ${
-          isActive
-            ? 'marching-ants border-transparent grow bg-error/30 text-error shadow-lg shadow-error/30'
-            : canDrop
-              ? 'border-dashed border-warning/40 hover:border-warning/60 bg-surface-elevated/50 text-text-muted hover:text-warning'
-              : 'border-dashed border-border/30 bg-surface-elevated/30 text-text-muted'
+          canDrop
+            ? 'group border-dashed border-warning/40 hover:border-warning/60 bg-surface-elevated/50 text-text-muted hover:text-warning data-drag-over:marching-ants data-drag-over:border-transparent data-drag-over:grow data-drag-over:bg-error/30 data-drag-over:text-error data-drag-over:shadow-lg data-drag-over:shadow-error/30'
+            : 'border-dashed border-border/30 bg-surface-elevated/30 text-text-muted'
         }
         ${className}
       `}
@@ -50,7 +44,10 @@ export const TrashZone = memo(function TrashZone({
         />
       </svg>
       <span className="text-sm font-semibold truncate transition-colors duration-200">
-        {isActive ? 'Release to remove' : 'Drop to remove'}
+        <span className="group-data-drag-over:hidden">Drop to remove</span>
+        <span className="hidden group-data-drag-over:inline">
+          Release to remove
+        </span>
       </span>
     </div>
   );

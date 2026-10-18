@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import type { ChessDragData } from '@constants';
 import type { PieceSymbol } from '@app-types';
-import { useDragContext } from '@hooks';
 import { DragProvider } from '../components/DragProvider';
 
 interface UseDragStateParams {
@@ -20,8 +19,6 @@ export function useDragState({
   handlePieceDrop,
   handlePieceRemove
 }: UseDragStateParams) {
-  const { active: activeDragData } = useDragContext();
-
   const onDragEnd = useCallback(
     (
       dragData: ChessDragData,
@@ -55,5 +52,5 @@ export function useDragState({
     [handlePieceDrop, handlePieceRemove]
   );
 
-  return { activeDragData, DragProvider, onDragEnd };
+  return { DragProvider, onDragEnd };
 }

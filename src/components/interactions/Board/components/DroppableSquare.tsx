@@ -18,7 +18,6 @@ interface DroppableSquareProps {
   isCursor?: boolean;
   isHeldSource?: boolean;
   isLoading: boolean;
-  cellSize?: number;
 }
 
 export const DroppableSquare = memo(
@@ -34,8 +33,7 @@ export const DroppableSquare = memo(
     isSelected = false,
     isCursor = false,
     isHeldSource = false,
-    isLoading,
-    cellSize = 64
+    isLoading
   }: DroppableSquareProps) {
     const bgColor = isLight ? lightColor : darkColor;
 
@@ -52,7 +50,7 @@ export const DroppableSquare = memo(
       [onSelect, row, col]
     );
 
-    const { setNodeRef, isOver } = useDroppable({
+    const setNodeRef = useDroppable({
       id: `sq-${row}-${col}`,
       data: { row, col }
     });
@@ -65,12 +63,10 @@ export const DroppableSquare = memo(
         role="gridcell"
         aria-label={ariaLabel}
         aria-selected={isSelected || isCursor}
-        className="w-full h-full flex items-center justify-center relative cursor-pointer"
+        className="w-full h-full flex items-center justify-center relative cursor-pointer data-drag-over:z-2 data-drag-over:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.85)]"
         style={{
           backgroundColor: bgColor,
           outline: 'none',
-          boxShadow: isOver ? 'inset 0 0 0 1px rgba(255,255,255,0.8)' : 'none',
-          zIndex: isOver ? 2 : 0,
           minWidth: 0,
           minHeight: 0
         }}
@@ -93,7 +89,6 @@ export const DroppableSquare = memo(
               col={col}
               isFromPalette={false}
               size="100%"
-              cellSize={cellSize}
             />
           </div>
         )}
@@ -113,8 +108,7 @@ export const DroppableSquare = memo(
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.isCursor === nextProps.isCursor &&
       prevProps.isHeldSource === nextProps.isHeldSource &&
-      prevProps.pieceImage === nextProps.pieceImage &&
-      prevProps.cellSize === nextProps.cellSize
+      prevProps.pieceImage === nextProps.pieceImage
     );
   }
 );

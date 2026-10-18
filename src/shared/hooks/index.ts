@@ -17,10 +17,13 @@ export {
 } from './useDOM';
 export type { ProviderState } from './useDatabaseSearch';
 export { useDatabaseSearch } from './useDatabaseSearch';
-export type { DragContextValue, DragSession } from './useDragDrop';
+export type { DragApi, DragSession } from './useDragDrop';
 export {
-  DragCtx,
-  useDragContext,
+  DRAG_OVER_ATTR,
+  DROP_ID_ATTR,
+  DragActiveCtx,
+  DragApiCtx,
+  useDragActive,
   useDraggable,
   useDroppable
 } from './useDragDrop';

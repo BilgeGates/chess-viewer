@@ -1,12 +1,22 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode
 } from 'react';
 import type { ChessDragData } from '@constants';
-import { DragCtx, type DragSession } from '@hooks';
+import {
+  DRAG_OVER_ATTR,
+  DROP_ID_ATTR,
+  DragActiveCtx,
+  DragApiCtx,
+  type DragApi,
+  type DragSession
+} from '@hooks';
+
+const CLICK_SUPPRESS_MS = 50;
 
 interface DragProviderProps {
   children: ReactNode;
@@ -17,87 +27,136 @@ interface DragProviderProps {
   ): void;
 }
 
+function hitTest(x: number, y: number): string | null {
+  const el = document
+    .elementFromPoint(x, y)
+    ?.closest<HTMLElement>(`[${DROP_ID_ATTR}]`);
+  return el?.getAttribute(DROP_ID_ATTR) ?? null;
+}
+
+function suppressNextClick() {
+  const block = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  window.addEventListener('click', block, { capture: true, once: true });
+  setTimeout(
+    () => window.removeEventListener('click', block, { capture: true }),
+    CLICK_SUPPRESS_MS
+  );
+}
+
 export function DragProvider({ children, onDragEnd }: DragProviderProps) {
   const [active, setActive] = useState<ChessDragData | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
 
   const sessionRef = useRef<DragSession | null>(null);
   const overIdRef = useRef<string | null>(null);
+  const onDragEndRef = useRef(onDragEnd);
+  onDragEndRef.current = onDragEnd;
   const targets = useRef<
     Map<string, { el: HTMLElement; data: Record<string, unknown> }>
   >(new Map());
 
-  const hitTest = useCallback((x: number, y: number): string | null => {
-    for (const [id, { el }] of targets.current) {
-      const r = el.getBoundingClientRect();
-      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return id;
-    }
-    return null;
+  const setOver = useCallback((id: string | null) => {
+    if (id === overIdRef.current) return;
+    const prev = overIdRef.current;
+    if (prev) targets.current.get(prev)?.el.removeAttribute(DRAG_OVER_ATTR);
+    if (id) targets.current.get(id)?.el.setAttribute(DRAG_OVER_ATTR, '');
+    overIdRef.current = id;
   }, []);
 
   useEffect(() => {
-    const onMove = (e: PointerEvent) => {
+    let frame = 0;
+    let lastX = 0;
+    let lastY = 0;
+
+    const render = () => {
+      frame = 0;
       const s = sessionRef.current;
       if (!s) return;
-      s.ghost.style.transform = `translate(${e.clientX - s.halfSize}px,${e.clientY - s.halfSize}px)`;
-      const id = hitTest(e.clientX, e.clientY);
-      if (id !== overIdRef.current) {
-        overIdRef.current = id;
-        setOverId(id);
-      }
+      s.ghost.style.transform = `translate3d(${lastX - s.halfSize}px,${lastY - s.halfSize}px,0)`;
+      setOver(hitTest(lastX, lastY));
     };
 
-    const onUp = () => {
+    const finish = (targetId: string | null) => {
       const s = sessionRef.current;
       if (!s) return;
+      cancelAnimationFrame(frame);
+      frame = 0;
       s.ghost.remove();
-      const tid = overIdRef.current;
-      const target = tid ? (targets.current.get(tid) ?? null) : null;
       sessionRef.current = null;
-      overIdRef.current = null;
+      setOver(null);
       setActive(null);
-      setOverId(null);
-      onDragEnd(s.dragData, tid, target?.data ?? null);
+      suppressNextClick();
+      if (!targetId) return;
+      const target = targets.current.get(targetId) ?? null;
+      onDragEndRef.current(s.dragData, targetId, target?.data ?? null);
     };
 
-    window.addEventListener('pointermove', onMove, { passive: true });
+    const isSessionPointer = (e: PointerEvent) =>
+      sessionRef.current?.pointerId === e.pointerId;
+
+    const onMove = (e: PointerEvent) => {
+      if (!isSessionPointer(e)) return;
+      e.preventDefault();
+      lastX = e.clientX;
+      lastY = e.clientY;
+      if (!frame) frame = requestAnimationFrame(render);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (isSessionPointer(e)) finish(hitTest(e.clientX, e.clientY));
+    };
+
+    const onCancel = (e: PointerEvent) => {
+      if (isSessionPointer(e)) finish(null);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && sessionRef.current) finish(null);
+    };
+
+    const onBlur = () => finish(null);
+
+    window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
-    window.addEventListener('pointercancel', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('blur', onBlur);
     return () => {
+      cancelAnimationFrame(frame);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('blur', onBlur);
+      sessionRef.current?.ghost.remove();
+      sessionRef.current = null;
     };
-  }, [hitTest, onDragEnd]);
+  }, [setOver]);
 
-  const startDrag = useCallback((session: DragSession) => {
-    sessionRef.current = session;
-    document.body.appendChild(session.ghost);
-    setActive(session.dragData);
-  }, []);
-
-  const registerDropTarget = useCallback(
-    (id: string, el: HTMLElement, data: Record<string, unknown>) => {
-      targets.current.set(id, { el, data });
-    },
+  const api = useMemo<DragApi>(
+    () => ({
+      startDrag(session) {
+        sessionRef.current = session;
+        document.body.appendChild(session.ghost);
+        setActive(session.dragData);
+      },
+      isDragging: () => sessionRef.current !== null,
+      registerDropTarget(id, el, data) {
+        el.setAttribute(DROP_ID_ATTR, id);
+        targets.current.set(id, { el, data });
+      },
+      unregisterDropTarget(id) {
+        targets.current.delete(id);
+      }
+    }),
     []
   );
 
-  const unregisterDropTarget = useCallback((id: string) => {
-    targets.current.delete(id);
-  }, []);
-
   return (
-    <DragCtx.Provider
-      value={{
-        active,
-        overId,
-        _startDrag: startDrag,
-        registerDropTarget,
-        unregisterDropTarget
-      }}
-    >
-      {children}
-    </DragCtx.Provider>
+    <DragApiCtx.Provider value={api}>
+      <DragActiveCtx.Provider value={active}>{children}</DragActiveCtx.Provider>
+    </DragApiCtx.Provider>
   );
 }
