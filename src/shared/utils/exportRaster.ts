@@ -2,19 +2,10 @@ import type { ExportConfig, ProgressCallback } from './canvasExporter';
 import { createUltraQualityCanvas } from './canvasRenderer';
 import {
   checkCancellation,
-  clearActiveRasterTask,
   exportState,
-  setActiveRasterTask,
   setProgress,
   waitWhilePaused
 } from './exportState';
-import { calculateRenderSurfaceSize } from './imageOptimizer';
-import { logger } from './logger';
-import { generateBoardSVG } from './svgExporter';
-import {
-  isSvgRasterWorkerSupported,
-  startSvgRasterWorkerTask
-} from './workerRasterExport';
 
 // Helpers
 function canvasToBlob(
@@ -49,7 +40,8 @@ function canvasToBlob(
   });
 }
 
-async function createCanvasRasterBlob(
+// Service
+export async function createRasterBlob(
   config: ExportConfig,
   format: 'png' | 'jpeg',
   onProgress?: ProgressCallback
@@ -104,88 +96,4 @@ async function createCanvasRasterBlob(
     canvas.width = 0;
     canvas.height = 0;
   }
-}
-
-async function createWorkerRasterBlob(
-  config: ExportConfig,
-  format: 'png' | 'jpeg',
-  onProgress?: ProgressCallback
-): Promise<Blob | null> {
-  if (!isSvgRasterWorkerSupported()) return null;
-
-  const pieceValues = Object.values(config.pieceImages);
-  const hasBlobPieces = pieceValues.some((img) => {
-    const src = img?.currentSrc || img?.src || '';
-    return src.startsWith('blob:');
-  });
-  if (hasBlobPieces) return null;
-
-  const {
-    boardSize,
-    showCoords,
-    exportQuality,
-    showThinFrame = false
-  } = config;
-
-  setProgress(onProgress, 20, 'Building SVG');
-  const svgString = await generateBoardSVG(config);
-  await waitWhilePaused();
-  checkCancellation();
-
-  const surface = calculateRenderSurfaceSize(
-    boardSize,
-    showCoords,
-    exportQuality,
-    showThinFrame
-  );
-
-  const pixelSvg = svgString
-    .replace(/width="[\d.]+cm"/, `width="${surface.canvasWidth}"`)
-    .replace(/height="[\d.]+cm"/, `height="${surface.canvasHeight}"`);
-
-  const task = startSvgRasterWorkerTask({
-    svgString: pixelSvg,
-    width: surface.canvasWidth,
-    height: surface.canvasHeight,
-    format,
-    quality: 0.92,
-    onProgress: (progress, label) => {
-      const mappedProgress = Math.max(
-        45,
-        Math.min(80, 45 + Math.round((progress / 100) * 35))
-      );
-      setProgress(onProgress, mappedProgress, label ?? 'Rendering');
-    }
-  });
-
-  if (!task) return null;
-
-  setActiveRasterTask(task.cancel);
-
-  try {
-    return await task.promise;
-  } finally {
-    clearActiveRasterTask();
-  }
-}
-
-// Service
-export async function createRasterBlob(
-  config: ExportConfig,
-  format: 'png' | 'jpeg',
-  onProgress?: ProgressCallback
-): Promise<Blob> {
-  try {
-    const workerBlob = await createWorkerRasterBlob(config, format, onProgress);
-    if (workerBlob) return workerBlob;
-  } catch (error: unknown) {
-    if (error instanceof Error && error.message === 'Export cancelled') {
-      throw error;
-    }
-    logger.warn(
-      'Worker raster export failed. Falling back to main-thread canvas:',
-      error
-    );
-  }
-  return createCanvasRasterBlob(config, format, onProgress);
 }

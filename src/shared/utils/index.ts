@@ -17,4 +17,3 @@ export * from './saveBlob';
 export * from './svgExporter';
 export * from './syncHydration';
 export * from './themeMode';
-export * from './workerRasterExport';

@@ -7,7 +7,6 @@ import {
   shouldForceCoordinateBorder
 } from './imageOptimizer';
 import { isValidHexColor, MAX_FEN_LENGTH } from '@chessviewer-org/chess-viewer';
-import { isSvgRasterWorkerSupported } from './workerRasterExport';
 
 // Types
 export interface ExportState {
@@ -21,24 +20,10 @@ export let exportState: ExportState = {
   paused: false
 };
 
-let activeRasterTaskCancel: (() => void) | null = null;
-
 // Actions
-export function setActiveRasterTask(cancel: () => void) {
-  activeRasterTaskCancel = cancel;
-}
-
-export function clearActiveRasterTask() {
-  activeRasterTaskCancel = null;
-}
-
 export function cancelExport() {
   exportState.cancelled = true;
   exportState.paused = false;
-  if (activeRasterTaskCancel) {
-    activeRasterTaskCancel();
-    clearActiveRasterTask();
-  }
 }
 
 export function pauseExport() {
@@ -54,7 +39,6 @@ export function resetExportState() {
     cancelled: false,
     paused: false
   };
-  clearActiveRasterTask();
 }
 
 export async function waitWhilePaused(): Promise<void> {
@@ -125,10 +109,7 @@ export function getExportInfo(config: ExportConfig): ExportInfo {
     physicalWidthCm: Number(exportSize.physicalWidthCm.toFixed(2)),
     physicalHeightCm: Number(exportSize.physicalHeightCm.toFixed(2)),
     effectiveDPI: exportSize.effectiveDPI,
-    forceCoordinateBorder: shouldForceCoordinateBorder(exportQuality),
-    renderEngine: isSvgRasterWorkerSupported()
-      ? 'svg-worker-raster'
-      : 'canvas-main-thread'
+    forceCoordinateBorder: shouldForceCoordinateBorder(exportQuality)
   };
 }
 

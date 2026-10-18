@@ -287,7 +287,6 @@ describe('getExportInfo', () => {
     assert.equal(info.effectiveDPI, 600);
     assert.equal(info.physicalSizeCm, 8);
     assert.ok(typeof info.displaySize === 'string');
-    assert.ok(typeof info.renderEngine === 'string');
     assert.ok(info.memoryEstimateMB > 0);
   });
 
@@ -315,14 +314,6 @@ describe('getExportInfo', () => {
     const info = getExportInfo(VALID_CONFIG);
     assert.equal(info.willBeReduced, false);
     assert.ok(info.maxCanvasSize >= info.canvasWidth);
-  });
-
-  test('renderEngine is a valid string', () => {
-    const info = getExportInfo(VALID_CONFIG);
-    assert.ok(
-      info.renderEngine === 'svg-worker-raster' ||
-        info.renderEngine === 'canvas-main-thread'
-    );
   });
 
   test('fileSizeEstimates are positive', () => {

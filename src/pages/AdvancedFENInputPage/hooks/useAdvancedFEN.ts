@@ -21,13 +21,14 @@ import {
   getSVGBlob,
   logger,
   pauseExport,
+  resetExportState,
   resumeExport,
   sanitizeFileName,
   saveBlob,
   validateFEN,
   waitWhilePaused
 } from '@utils';
-import { zip } from 'fflate';
+import { type Zippable, zip } from 'fflate';
 import { useFENBatch } from '@contexts';
 
 import { parseSmartNaming } from '../utils/parseSmartNaming';
@@ -93,6 +94,15 @@ const { MAX_FENS, STORAGE_KEYS, DEFAULT_FENS, DEFAULT_INTERVAL, TABS } =
   ADVANCED_FEN_CONFIG;
 
 // Helpers
+function uniqueName(name: string, used: Set<string>): string {
+  let candidate = name;
+  for (let n = 2; used.has(candidate.toLowerCase()); n++) {
+    candidate = `${name}-${n}`;
+  }
+  used.add(candidate.toLowerCase());
+  return candidate;
+}
+
 function runFormat(
   format: ExportFormat,
   config: ExportConfigLike,
@@ -464,6 +474,7 @@ export function useAdvancedFEN(props: AdvancedFENInitialProps = {}) {
   );
 
   function startExport() {
+    resetExportState();
     setIsPaused(false);
     setExportState({
       isExporting: true,
@@ -474,6 +485,7 @@ export function useAdvancedFEN(props: AdvancedFENInitialProps = {}) {
   }
 
   function finishExport() {
+    resetExportState();
     setExportState((p) => ({ ...p, isExporting: false, progress: 100 }));
   }
 
@@ -504,7 +516,8 @@ export function useAdvancedFEN(props: AdvancedFENInitialProps = {}) {
     if (!orderedFormats.length) return;
     startExport();
     try {
-      const zipData: Record<string, Uint8Array> = {};
+      const zipData: Zippable = {};
+      const usedNames = new Set<string>();
       const chainedSettings = {
         pieceStyle,
         boardSize,
@@ -543,7 +556,10 @@ export function useAdvancedFEN(props: AdvancedFENInitialProps = {}) {
           !isChained && s.fileName
             ? (parseSmartNaming(s.fileName, 1)[0] ?? '')
             : (parsedNames[i] ?? '');
-        const base = sanitizeFileName(rawName || `Position-${i + 1}`);
+        const base = uniqueName(
+          sanitizeFileName(rawName || `Position-${i + 1}`),
+          usedNames
+        );
         const fmts = isChained
           ? orderedFormats
           : FORMAT_ORDER.filter((x) =>
@@ -566,7 +582,8 @@ export function useAdvancedFEN(props: AdvancedFENInitialProps = {}) {
             fmt === 'svg'
               ? await getSVGBlob(conf, onProg)
               : await getRasterBlob(conf, fmt, onProg);
-          zipData[filePath] = new Uint8Array(await blob.arrayBuffer());
+          const bytes = new Uint8Array(await blob.arrayBuffer());
+          zipData[filePath] = fmt === 'svg' ? bytes : [bytes, { level: 0 }];
           done++;
         }
       }

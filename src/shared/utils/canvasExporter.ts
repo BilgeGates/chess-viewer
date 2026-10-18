@@ -54,7 +54,6 @@ export interface ExportInfo {
   physicalHeightCm: number;
   effectiveDPI: number;
   forceCoordinateBorder: boolean;
-  renderEngine: string;
 }
 
 export { cancelExport, getExportInfo, pauseExport, resumeExport };
@@ -65,23 +64,18 @@ export async function getRasterBlob(
   format: 'png' | 'jpeg',
   onProgress?: ProgressCallback
 ): Promise<Blob> {
-  resetExportState();
-  try {
-    validateExportConfig(config);
-    setProgress(onProgress, 5, 'Preparing');
-    await waitWhilePaused();
-    checkCancellation();
+  validateExportConfig(config);
+  setProgress(onProgress, 5, 'Preparing');
+  await waitWhilePaused();
+  checkCancellation();
 
-    const blob = await createRasterBlob(config, format, onProgress);
-    setProgress(onProgress, 85, 'Image encoded');
-    await waitWhilePaused();
-    checkCancellation();
+  const blob = await createRasterBlob(config, format, onProgress);
+  setProgress(onProgress, 85, 'Image encoded');
+  await waitWhilePaused();
+  checkCancellation();
 
-    const exportInfo = getExportInfo(config);
-    return await changeDPI(blob, exportInfo.effectiveDPI, format);
-  } finally {
-    resetExportState();
-  }
+  const exportInfo = getExportInfo(config);
+  return changeDPI(blob, exportInfo.effectiveDPI, format);
 }
 
 async function downloadRaster(
@@ -91,6 +85,7 @@ async function downloadRaster(
   extension: string,
   onProgress?: ProgressCallback
 ): Promise<number> {
+  resetExportState();
   try {
     const finalBlob = await getRasterBlob(config, format, onProgress);
     saveBlob(finalBlob, fileName, extension);
@@ -104,6 +99,8 @@ async function downloadRaster(
       `${format.toUpperCase()} export failed: ${error instanceof Error ? error.message : String(error)}`,
       { cause: error instanceof Error ? error : undefined }
     );
+  } finally {
+    resetExportState();
   }
 }
 
