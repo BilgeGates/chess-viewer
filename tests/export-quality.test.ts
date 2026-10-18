@@ -7,6 +7,7 @@ import {
   formatFileSize
 } from '@utils/imageOptimizer';
 import { intrinsicPxOf, resizePieceSvg } from '@utils/pieceUtils';
+import { boardOutlineWidth } from '@chessviewer-org/chess-viewer';
 
 const CM_PER_INCH = 2.54;
 const PRINT_DPI = 300;
@@ -102,20 +103,22 @@ describe('coordinate border', () => {
     }
   });
 
-  test('coords OFF → border = 0 and canvas = boardPixels', () => {
+  test('coords OFF → border = 0 and canvas = board + outline on both sides', () => {
     for (const cm of BOARD_SIZES) {
       for (const q of QUALITIES) {
         const s = calculateRenderSurfaceSize(cm, false, q);
+        const framed = s.boardPixels + s.outline * 2;
         assert.equal(s.borderSize, 0, `${cm}cm ${q}×: border not zero`);
+        assert.equal(s.outline, boardOutlineWidth(s.boardPixels));
         assert.equal(
           s.canvasWidth,
-          s.boardPixels,
-          `${cm}cm ${q}×: canvas ${s.canvasWidth} !== board ${s.boardPixels}`
+          framed,
+          `${cm}cm ${q}×: canvas ${s.canvasWidth} !== framed board ${framed}`
         );
         assert.equal(
           s.canvasHeight,
-          s.boardPixels,
-          `${cm}cm ${q}×: canvas ${s.canvasHeight} !== board ${s.boardPixels}`
+          framed,
+          `${cm}cm ${q}×: canvas ${s.canvasHeight} !== framed board ${framed}`
         );
       }
     }
@@ -230,7 +233,8 @@ describe('SVG internal → canvas coordinate mapping', () => {
   const SVG_BORDER_RATIO = 0.05;
   const SVG_BOARD_UNITS = 800;
   const SVG_BORDER_UNITS = Math.round(SVG_BOARD_UNITS * SVG_BORDER_RATIO);
-  const SVG_TOTAL_UNITS = SVG_BOARD_UNITS + SVG_BORDER_UNITS;
+  const SVG_TOTAL_UNITS =
+    SVG_BOARD_UNITS + SVG_BORDER_UNITS + boardOutlineWidth(SVG_BOARD_UNITS) * 2;
   const SVG_SQUARE_UNITS = SVG_BOARD_UNITS / 8;
 
   test('SVG→Canvas square pixel dəqiqliyi (hər ölçü × hər keyfiyyət)', () => {

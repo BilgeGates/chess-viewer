@@ -9,6 +9,7 @@ export {
   useDragSensitivitySetting
 } from './useA11y';
 export { useChessBoard } from './useChessBoard';
+export { useSquarePatternSetting } from './useSquarePattern';
 export {
   useCopyToClipboard,
   useFocusTrap,

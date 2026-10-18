@@ -1,12 +1,18 @@
 import { ChessBoard, isChessBoard } from '@app-types';
 
 import {
+  boardOutlineWidth,
   getDisplayCoordinates,
+  hatchPatternSVG,
+  pieceHaloFilterSVG,
+  pieceHaloRadius,
   isLightSquare,
   parseFEN,
-  sanitizeInput
+  sanitizeInput,
+  type SquarePattern
 } from '@chessviewer-org/chess-viewer';
 
+import { readSquarePattern } from './boardPattern';
 import { shouldForceCoordinateBorder } from './imageOptimizer';
 import {
   type PieceVector,
@@ -22,6 +28,8 @@ import { saveBlob } from './saveBlob';
 // Constants
 export const SVG_BOARD_PX = 800;
 export const SVG_COORD_BORDER_RATIO = 0.05;
+const HATCH_ID = 'cv-hatch';
+const HALO_ID = 'cv-halo';
 
 // Helpers
 export function escapeXmlAttr(value: string): string {
@@ -44,6 +52,7 @@ interface SVGExportConfig {
   showCoordinateBorder?: boolean;
   showThinFrame?: boolean;
   exportQuality?: number;
+  squarePattern?: SquarePattern;
 }
 
 export async function generateBoardSVG(
@@ -59,8 +68,10 @@ export async function generateBoardSVG(
     showCoords,
     showCoordinateBorder,
     showThinFrame,
-    exportQuality = 1
+    exportQuality = 1,
+    squarePattern = readSquarePattern()
   } = config;
+  const hatched = squarePattern === 'hatched';
 
   const boardPx = SVG_BOARD_PX;
   const squarePx = boardPx / 8;
@@ -76,10 +87,12 @@ export async function generateBoardSVG(
   const withFrame = !!showThinFrame;
   const framePx = withFrame ? Math.max(2, Math.round(boardPx * 0.003)) * 2 : 0;
 
-  const totalWidth = borderPx + boardPx + framePx;
-  const totalHeight = boardPx + borderPx + framePx;
-  const boardX = borderPx + (withFrame ? framePx / 2 : 0);
-  const boardY = withFrame ? framePx / 2 : 0;
+  const outline = boardOutlineWidth(boardPx);
+  const frameOffset = withFrame ? framePx / 2 : 0;
+  const totalWidth = borderPx + boardPx + outline * 2 + framePx;
+  const totalHeight = boardPx + borderPx + outline * 2 + framePx;
+  const boardX = borderPx + outline + frameOffset;
+  const boardY = outline + frameOffset;
 
   const parsedBoard = parseFEN(fen);
   if (!isChessBoard(parsedBoard)) {
@@ -143,8 +156,24 @@ export async function generateBoardSVG(
       `<title>Chess Board Position</title>`
   );
 
-  if (pieceVectors.size > 0) {
+  if (pieceVectors.size > 0 || hatched) {
     parts.push('<defs>');
+    if (hatched) {
+      parts.push(
+        hatchPatternSVG(
+          HATCH_ID,
+          squarePx,
+          boardX,
+          boardY,
+          sanitizeInput(darkSquare)
+        ),
+        pieceHaloFilterSVG(
+          HALO_ID,
+          pieceHaloRadius(squarePx),
+          sanitizeInput(lightSquare)
+        )
+      );
+    }
     for (const [key, vector] of pieceVectors) {
       const symbolId = `cv-p-${key}`;
       const content = namespacePieceIds(vector, `${symbolId}-`);
@@ -156,13 +185,12 @@ export async function generateBoardSVG(
   }
 
   if (withBorder) {
+    const span = boardPx + outline * 2;
     parts.push(
-      `<rect x="${boardX - borderPx + (withFrame ? framePx / 2 : 0)}" y="${boardY}" ` +
-        `width="${borderPx}" height="${boardPx}" fill="#ffffff"/>`
-    );
-    parts.push(
-      `<rect x="${boardX - borderPx + (withFrame ? framePx / 2 : 0)}" y="${boardY + boardPx}" ` +
-        `width="${boardPx + borderPx}" height="${borderPx}" fill="#ffffff"/>`
+      `<rect x="${frameOffset}" y="${frameOffset}" ` +
+        `width="${borderPx}" height="${span}" fill="#ffffff"/>`,
+      `<rect x="${frameOffset}" y="${frameOffset + span}" ` +
+        `width="${borderPx + span}" height="${borderPx}" fill="#ffffff"/>`
     );
   }
 
@@ -176,24 +204,21 @@ export async function generateBoardSVG(
     );
   }
 
-  const borderStroke = Math.max(1, Math.round(boardPx * 0.002));
-  const bHalf = borderStroke / 2;
   parts.push(
-    `<rect x="${boardX - bHalf}" y="${boardY - bHalf}" ` +
-      `width="${boardPx + borderStroke}" height="${boardPx + borderStroke}" ` +
-      `fill="none" stroke="#000000" stroke-width="${borderStroke}"/>`
+    `<rect x="${boardX - outline}" y="${boardY - outline}" ` +
+      `width="${boardPx + outline * 2}" height="${boardPx + outline * 2}" fill="#000000"/>`
   );
 
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const [visRow, visCol] = getDisplayCoordinates(row, col, flipped);
-      const color = isLightSquare(row, col) ? lightSquare : darkSquare;
+      const isLight = isLightSquare(row, col);
+      const color = isLight || hatched ? lightSquare : darkSquare;
       const x = boardX + visCol * squarePx;
       const y = boardY + visRow * squarePx;
-      parts.push(
-        `<rect x="${x}" y="${y}" width="${squarePx}" height="${squarePx}" ` +
-          `fill="${sanitizeInput(color)}"/>`
-      );
+      const rect = `<rect x="${x}" y="${y}" width="${squarePx}" height="${squarePx}" `;
+      parts.push(`${rect}fill="${sanitizeInput(color)}"/>`);
+      if (hatched && !isLight) parts.push(`${rect}fill="url(#${HATCH_ID})"/>`);
     }
   }
 
@@ -206,21 +231,20 @@ export async function generateBoardSVG(
       const x = boardX + visCol * squarePx;
       const y = boardY + visRow * squarePx;
 
-      if (pieceVectors.has(key)) {
-        const symbolId = `cv-p-${key}`;
-        parts.push(
-          `<use href="#${symbolId}" xlink:href="#${symbolId}" ` +
-            `x="${x}" y="${y}" width="${squarePx}" height="${squarePx}"/>`
-        );
-        continue;
-      }
-
+      const size = `width="${squarePx}" height="${squarePx}"`;
       const dataURL = pieceDataURLs[key];
-      if (!dataURL) continue;
+      const piece = pieceVectors.has(key)
+        ? `<use href="#cv-p-${key}" xlink:href="#cv-p-${key}" x="0" y="0" ${size}/>`
+        : dataURL
+          ? `<image href="${escapeXmlAttr(dataURL)}" x="0" y="0" ${size} image-rendering="optimizeQuality"/>`
+          : null;
+      if (!piece) continue;
+
+      const onHatch = hatched && !isLightSquare(row, col);
       parts.push(
-        `<image href="${escapeXmlAttr(dataURL)}" x="${x}" y="${y}" ` +
-          `width="${squarePx}" height="${squarePx}" ` +
-          `image-rendering="optimizeQuality"/>`
+        `<svg x="${x}" y="${y}" ${size}>` +
+          (onHatch ? `<g filter="url(#${HALO_ID})">${piece}</g>` : piece) +
+          `</svg>`
       );
     }
   }
@@ -239,14 +263,13 @@ export async function generateBoardSVG(
 
     for (let col = 0; col < 8; col++) {
       const x = boardX + col * squarePx + squarePx / 2;
-      const y = boardY + boardPx + borderPx * 0.55 + fontSize * 0.35;
+      const y = boardY + boardPx + outline + borderPx * 0.55 + fontSize * 0.35;
       parts.push(
         `<text x="${x}" y="${y}" ${textAttrs}>${sanitizeInput(files[col])}</text>`
       );
     }
 
     for (let row = 0; row < 8; row++) {
-      const frameOffset = withFrame ? framePx / 2 : 0;
       const x = frameOffset + borderPx * 0.5;
       const y = boardY + row * squarePx + squarePx / 2 + fontSize * 0.35;
       parts.push(

@@ -1,6 +1,9 @@
 import { QUALITY_PRESETS } from '@constants';
 
-import { getCoordinateParams } from '@chessviewer-org/chess-viewer';
+import {
+  boardOutlineWidth,
+  getCoordinateParams
+} from '@chessviewer-org/chess-viewer';
 import { logger } from './logger';
 
 // Constants
@@ -103,6 +106,7 @@ function calculateExportSize(
 export interface RenderSurfaceSize {
   boardPixels: number;
   borderSize: number;
+  outline: number;
   shouldShowFrame: boolean;
   frameThickness: number;
   framePadding: number;
@@ -132,11 +136,12 @@ export function calculateRenderSurfaceSize(
     ? Math.max(2, Math.round(exportSize.boardPixels * 0.003))
     : 0;
   const framePadding = shouldShowFrame ? frameThickness * 2 : 0;
+  const outline = boardOutlineWidth(exportSize.boardPixels);
   const canvasWidth = Math.round(
-    borderSize + exportSize.boardPixels + framePadding
+    borderSize + exportSize.boardPixels + outline * 2 + framePadding
   );
   const canvasHeight = Math.round(
-    exportSize.boardPixels + borderSize + framePadding
+    exportSize.boardPixels + borderSize + outline * 2 + framePadding
   );
   const physicalWidthCm = (canvasWidth / exportSize.effectiveDPI) * CM_PER_INCH;
   const physicalHeightCm =
@@ -144,6 +149,7 @@ export function calculateRenderSurfaceSize(
   return {
     boardPixels: exportSize.boardPixels,
     borderSize,
+    outline,
     shouldShowFrame,
     frameThickness,
     framePadding,

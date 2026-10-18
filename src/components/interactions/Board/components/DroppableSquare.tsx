@@ -72,6 +72,7 @@ export const DroppableSquare = memo(
         }}
         data-row={row}
         data-col={col}
+        data-shade={isLight ? 'light' : 'dark'}
       >
         {piece && pieceImage && !isLoading && (
           <div

@@ -302,3 +302,15 @@ select:focus-visible {
   scrollbar-width: thin;
   scrollbar-color: var(--color-accent) var(--color-surface-elevated);
 }
+
+[data-square-pattern='hatched'] [data-shade='dark'] {
+  background-image: var(--board-hatch);
+}
+
+[data-square-pattern='hatched'] [data-shade='dark'] img {
+  --halo: 1.5px;
+  filter: drop-shadow(var(--halo) 0 0 var(--board-light))
+    drop-shadow(calc(var(--halo) * -1) 0 0 var(--board-light))
+    drop-shadow(0 var(--halo) 0 var(--board-light))
+    drop-shadow(0 calc(var(--halo) * -1) 0 var(--board-light));
+}

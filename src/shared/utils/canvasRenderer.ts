@@ -2,9 +2,16 @@ import {
   getDisplayCoordinates,
   getSquareBounds,
   isLightSquare,
-  parseFEN
+  parseFEN,
+  type SquarePattern
 } from '@chessviewer-org/chess-viewer';
 
+import {
+  drawBoardPiece,
+  fillBoardSquare,
+  isHatchedSquare,
+  readSquarePattern
+} from './boardPattern';
 import { drawCoordinates } from './coordinateCalculations';
 import { ensurePieceResolution, getPieceKey } from './pieceUtils';
 import {
@@ -24,6 +31,7 @@ export interface RenderConfig {
   exportQuality?: number;
   showCoordinateBorder?: boolean;
   showThinFrame?: boolean;
+  squarePattern?: SquarePattern;
 }
 
 export async function createUltraQualityCanvas(
@@ -40,7 +48,8 @@ export async function createUltraQualityCanvas(
     format = 'png',
     showCoordinateBorder = true,
     exportQuality = 1,
-    showThinFrame = false
+    showThinFrame = false,
+    squarePattern = readSquarePattern()
   } = config;
 
   if (
@@ -76,6 +85,7 @@ export async function createUltraQualityCanvas(
   const {
     boardPixels: bPx,
     borderSize: border,
+    outline,
     shouldShowFrame: hasFrame,
     frameThickness: frame,
     canvasWidth: cW,
@@ -104,8 +114,8 @@ export async function createUltraQualityCanvas(
 
     const sq = bPx / 8;
     const offset = hasFrame ? frame : 0;
-    const bX = border + offset,
-      bY = offset;
+    const bX = border + offset + outline;
+    const bY = offset + outline;
     const yieldToMain = () => new Promise((res) => setTimeout(res, 0));
 
     const targetPiecePx = Math.ceil(sq);
@@ -138,58 +148,80 @@ export async function createUltraQualityCanvas(
       format.startsWith('jp')
     ) {
       ctx.fillStyle = '#fff';
-      ctx.fillRect(offset, offset, border, bPx);
-      ctx.fillRect(offset, offset + bPx, border + bPx, border);
+      ctx.fillRect(offset, offset, border, bPx + outline * 2);
+      ctx.fillRect(
+        offset,
+        offset + bPx + outline * 2,
+        border + bPx + outline * 2,
+        border
+      );
     }
 
-    const bStroke = Math.max(1, bPx * 0.002);
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = bStroke;
-    ctx.strokeRect(
-      bX - bStroke / 2,
-      bY - bStroke / 2,
-      bPx + bStroke,
-      bPx + bStroke
+    ctx.fillStyle = '#000';
+    ctx.fillRect(
+      bX - outline,
+      bY - outline,
+      bPx + outline * 2,
+      bPx + outline * 2
     );
+    await yieldToMain();
+
+    const fill = {
+      light: lightSquare,
+      dark: darkSquare,
+      pattern: squarePattern
+    };
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const [vR, vC] = getDisplayCoordinates(row, col, flipped);
+        const { x, y, width, height } = getSquareBounds(vR, vC, sq, bX, bY);
+        fillBoardSquare(
+          ctx,
+          x,
+          y,
+          width,
+          height,
+          isLightSquare(row, col),
+          fill
+        );
+      }
+    }
     await yieldToMain();
 
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
-        const [vR, vC] = getDisplayCoordinates(row, col, flipped);
-        ctx.fillStyle = isLightSquare(row, col) ? lightSquare : darkSquare;
-        const { x, y, width, height } = getSquareBounds(vR, vC, sq, bX, bY);
-        ctx.fillRect(x, y, width, height);
-
-        const pieceChar = board[row]?.[col];
-        const pKey = getPieceKey(pieceChar ?? '');
+        const pKey = getPieceKey(board[row]?.[col] ?? '');
         if (!pKey) continue;
         const img = resolvedPieces[pKey] ?? pieceImages[pKey];
-        if (img?.complete && img.naturalWidth > 0) {
-          const sz = Math.min(width, height);
-          ctx.drawImage(
-            img,
-            x + (width - sz) / 2,
-            y + (height - sz) / 2,
-            sz,
-            sz
-          );
-        }
+        if (!img?.complete || img.naturalWidth <= 0) continue;
+        const [vR, vC] = getDisplayCoordinates(row, col, flipped);
+        const square = getSquareBounds(vR, vC, sq, bX, bY);
+        const sz = Math.min(square.width, square.height);
+        drawBoardPiece(
+          ctx,
+          img,
+          square.x + (square.width - sz) / 2,
+          square.y + (square.height - sz) / 2,
+          sz,
+          isHatchedSquare(isLightSquare(row, col), fill)
+            ? { color: lightSquare, square }
+            : null
+        );
       }
       await yieldToMain();
     }
 
     if (showCoords)
-      drawCoordinates(
-        ctx,
-        sq,
-        border + offset,
-        flipped,
-        bPx,
-        true,
-        false,
-        bY,
-        offset
-      );
+      drawCoordinates(ctx, {
+        squareSize: sq,
+        boardX: bX,
+        boardY: bY,
+        boardSize: bPx,
+        rankBandX: offset,
+        fileBandY: bY + bPx + outline,
+        bandSize: border,
+        flipped
+      });
     await yieldToMain();
     return canvas;
   } catch (err) {

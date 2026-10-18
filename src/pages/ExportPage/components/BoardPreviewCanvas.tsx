@@ -1,9 +1,14 @@
 import { memo, useLayoutEffect, useRef, useState } from 'react';
 
 import { BOARD_THEMES } from '@constants';
+import { useSquarePatternSetting } from '@hooks';
 
 import {
+  boardOutlineWidth,
+  drawBoardPiece,
+  fillBoardSquare,
   getDisplayCoordinates,
+  isHatchedSquare,
   getPieceKey,
   getSquareBounds,
   isLightSquare,
@@ -44,6 +49,7 @@ const BoardPreviewCanvas = memo(
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hasError, setHasError] = useState(false);
     const [wrapperPx, setWrapperPx] = useState(0);
+    const [squarePattern] = useSquarePatternSetting();
 
     useLayoutEffect(() => {
       const el = wrapperRef.current;
@@ -60,6 +66,7 @@ const BoardPreviewCanvas = memo(
     const gutter = wrapperPx > 0 ? Math.round(wrapperPx * GUTTER_RATIO) : 0;
     const boardPx = Math.max(0, wrapperPx - gutter);
     const cellSize = boardPx > 0 ? boardPx / 8 : 0;
+    const outlinePx = boardOutlineWidth(boardPx);
 
     const hasImages = Object.keys(pieceImages).length > 0;
     const isLoading = piecesLoading && !hasImages;
@@ -94,13 +101,21 @@ const BoardPreviewCanvas = memo(
 
         const sq = boardPx / 8;
         const snap = (v: number) => Math.round(v * dpr) / dpr;
+        const fill = { light, dark, pattern: squarePattern };
 
         for (let row = 0; row < 8; row++) {
           for (let col = 0; col < 8; col++) {
             const [dRow, dCol] = getDisplayCoordinates(row, col, flipped);
             const b = getSquareBounds(dRow, dCol, sq, 0, 0);
-            ctx.fillStyle = isLightSquare(row, col) ? light : dark;
-            ctx.fillRect(b.x, b.y, b.width, b.height);
+            fillBoardSquare(
+              ctx,
+              b.x,
+              b.y,
+              b.width,
+              b.height,
+              isLightSquare(row, col),
+              fill
+            );
           }
         }
 
@@ -115,12 +130,15 @@ const BoardPreviewCanvas = memo(
             const b = getSquareBounds(dRow, dCol, sq, 0, 0);
             const pad = snap(sq * 0.04);
             const ps = snap(sq - pad * 2);
-            ctx.drawImage(
+            drawBoardPiece(
+              ctx,
               img,
               snap(b.centerX - ps / 2),
               snap(b.centerY - ps / 2),
               ps,
-              ps
+              isHatchedSquare(isLightSquare(row, col), fill)
+                ? { color: light, square: b }
+                : null
             );
           }
         }
@@ -137,6 +155,7 @@ const BoardPreviewCanvas = memo(
       fen,
       lightSquare,
       darkSquare,
+      squarePattern,
       pieceImages,
       flipped,
       hasImages,
@@ -172,14 +191,14 @@ const BoardPreviewCanvas = memo(
             ref={canvasRef}
             aria-hidden="true"
             className={`block transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+            style={{ boxShadow: `0 0 0 ${outlinePx}px #000` }}
           />
           {showThinFrame && (
             <div
               className="absolute pointer-events-none box-border"
               style={{
-                inset: '-2.5px',
-                border: `2px solid ${darkSquare ?? DEFAULT_DARK}`,
-                boxShadow: 'inset 0 0 0 0.5px rgba(0,0,0,0.9)',
+                inset: `-${outlinePx + 2}px`,
+                border: '2px solid #333',
                 zIndex: 10
               }}
             />

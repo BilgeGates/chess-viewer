@@ -16,10 +16,15 @@ import {
   X
 } from '@/assets/icons';
 
-import { useNotifications, usePagination, useThemePresets } from '@hooks';
+import {
+  useNotifications,
+  usePagination,
+  useSquarePatternSetting,
+  useThemePresets
+} from '@hooks';
 import { BOARD_THEMES } from '@constants';
 
-import { Pagination } from '@ui';
+import { Pagination, Switch } from '@ui';
 
 import { ColorPickerPanel } from './ColorPickerPanel';
 import { Swatch } from './Swatch';
@@ -202,6 +207,8 @@ export const BoardThemePicker = memo(function BoardThemePicker({
     });
   }, [mainPage, lightSquare, darkSquare]);
 
+  const [squarePattern, setSquarePattern] = useSquarePatternSetting();
+
   const gridStyle = { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` };
 
   return (
@@ -363,6 +370,14 @@ export const BoardThemePicker = memo(function BoardThemePicker({
           />
         </div>
       )}
+
+      <Switch
+        className="mt-3"
+        label="Hatched dark squares"
+        description="Draw dark squares as diagonal lines in the dark colour, the classic style of printed problem books. Applies to the board, previews and every export."
+        checked={squarePattern === 'hatched'}
+        onChange={(on) => setSquarePattern(on ? 'hatched' : 'solid')}
+      />
     </div>
   );
 });

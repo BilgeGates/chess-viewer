@@ -5,9 +5,16 @@ import { createServer, type Server } from 'node:http';
 import { join } from 'node:path';
 
 import { buildPieceVector, namespacePieceIds } from '@utils/pieceUtils';
-import { generateBoardSVG } from '@utils/svgExporter';
+import { boardOutlineWidth } from '@chessviewer-org/chess-viewer';
+import { generateBoardSVG, SVG_BOARD_PX } from '@utils/svgExporter';
 
 const PIECE_DIR = join(process.cwd(), 'public', 'piece');
+const SVG_TOTAL_PX =
+  SVG_BOARD_PX + SVG_BOARD_PX * 0.05 + boardOutlineWidth(SVG_BOARD_PX) * 2;
+
+function physicalCm(boardCm: number): string {
+  return `${Number((boardCm * (SVG_TOTAL_PX / SVG_BOARD_PX)).toFixed(2))}cm`;
+}
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const PIECE_KEYS = [
   'wK',
@@ -303,10 +310,10 @@ describe('generateBoardSVG end-to-end: cburnett', () => {
     }
   });
 
-  test('physical print size is exact: 8cm board → 8.4cm square with coords', () => {
-    assert.ok(svg.includes('width="8.4cm"'));
-    assert.ok(svg.includes('height="8.4cm"'));
-    assert.ok(svg.includes('viewBox="0 0 840 840"'));
+  test('physical print size keeps the 8cm board and adds coords + outline', () => {
+    assert.ok(svg.includes(`width="${physicalCm(8)}"`));
+    assert.ok(svg.includes(`height="${physicalCm(8)}"`));
+    assert.ok(svg.includes(`viewBox="0 0 ${SVG_TOTAL_PX} ${SVG_TOTAL_PX}"`));
   });
 
   test('64 squares are drawn', () => {
@@ -380,10 +387,10 @@ describe('generateBoardSVG end-to-end: icpieces (viewBox-less)', () => {
 });
 
 describe('generateBoardSVG physical size across board sizes', () => {
-  test('4cm → 4.2cm, 6cm → 6.3cm (coords on)', async () => {
+  test('4cm and 6cm boards scale with coords + outline', async () => {
     for (const [cm, expected] of [
-      [4, '4.2cm'],
-      [6, '6.3cm']
+      [4, physicalCm(4)],
+      [6, physicalCm(6)]
     ] as const) {
       const out = await generateBoardSVG(
         baseConfig(pieceImagesFor('cburnett'), START_FEN, cm)

@@ -8,16 +8,6 @@ interface TextMetricsExt {
 }
 
 // Helpers
-function getCellCenter(
-  borderSize: number,
-  squareSize: number,
-  index: number
-): number {
-  const start = Math.round(borderSize + index * squareSize);
-  const end = Math.round(borderSize + (index + 1) * squareSize);
-  return Math.round((start + end) / 2);
-}
-
 function getTextMetrics(
   ctx: CanvasRenderingContext2D,
   sample: string,
@@ -42,52 +32,54 @@ function getBaselineFromCenter(
   return Math.round(centerY + (metrics.ascent - metrics.descent) / 2);
 }
 
+// Types
+export interface CoordinateLayout {
+  squareSize: number;
+  boardX: number;
+  boardY: number;
+  boardSize: number;
+  rankBandX: number;
+  fileBandY: number;
+  bandSize: number;
+  flipped: boolean;
+}
+
 // Service
 export function drawCoordinates(
   ctx: CanvasRenderingContext2D,
-  squareSize: number,
-  borderSize: number,
-  flipped: boolean,
-  boardSize: number,
-  forExport: boolean = false,
-  displayWhite: boolean = true,
-  boardStartY?: number,
-  frameOffset: number = 0
+  layout: CoordinateLayout
 ): void {
-  const coordParams = getCoordinateParams(boardSize);
-  const { fontSize, fontWeight } = coordParams;
-  const effectiveBorder = borderSize ?? coordParams.borderSize;
-  const coordBorder = effectiveBorder - frameOffset;
-
-  const boardY = boardStartY ?? (forExport ? 0 : effectiveBorder);
+  const { squareSize, boardX, boardY, boardSize, rankBandX, fileBandY } =
+    layout;
+  const { fontSize, fontWeight } = getCoordinateParams(boardSize);
 
   ctx.save();
   ctx.font = `${fontWeight} ${fontSize}px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
-  ctx.fillStyle = forExport ? '#000000' : displayWhite ? '#ffffff' : '#000000';
+  ctx.fillStyle = '#000000';
   ctx.textRendering = 'optimizeLegibility';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
   const rankMetrics = getTextMetrics(ctx, '8', fontSize);
   const fileMetrics = getTextMetrics(ctx, 'g', fontSize);
+  const rankX = Math.round(rankBandX + layout.bandSize * 0.5);
+  const fileCenterY = Math.round(fileBandY + layout.bandSize * 0.55);
 
-  for (let row = 0; row < 8; row++) {
-    const rank = flipped ? row + 1 : 8 - row;
-    const squareTop = boardY + row * squareSize;
-    const squareBottom = boardY + (row + 1) * squareSize;
-    const centerY = Math.round((squareTop + squareBottom) / 2);
-    const yPos = getBaselineFromCenter(centerY, rankMetrics);
-    const xPos = Math.round(frameOffset + coordBorder * 0.5);
-    ctx.fillText(rank.toString(), xPos, yPos);
-  }
-
-  for (let col = 0; col < 8; col++) {
-    const fileIndex = flipped ? 7 - col : col;
-    const file = String.fromCharCode(97 + fileIndex);
-    const xPos = getCellCenter(effectiveBorder, squareSize, col);
-    const bottomCenter = Math.round(boardY + boardSize + coordBorder * 0.55);
-    const yPos = getBaselineFromCenter(bottomCenter, fileMetrics);
-    ctx.fillText(file, xPos, yPos);
+  for (let i = 0; i < 8; i++) {
+    const rank = layout.flipped ? i + 1 : 8 - i;
+    const file = String.fromCharCode(97 + (layout.flipped ? 7 - i : i));
+    const centerY = Math.round(boardY + (i + 0.5) * squareSize);
+    const centerX = Math.round(boardX + (i + 0.5) * squareSize);
+    ctx.fillText(
+      rank.toString(),
+      rankX,
+      getBaselineFromCenter(centerY, rankMetrics)
+    );
+    ctx.fillText(
+      file,
+      centerX,
+      getBaselineFromCenter(fileCenterY, fileMetrics)
+    );
   }
 
   ctx.restore();

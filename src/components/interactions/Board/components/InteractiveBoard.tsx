@@ -1,8 +1,16 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import {
+  type CSSProperties,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef
+} from 'react';
 
 import type { PieceSymbol } from '@app-types';
 
-import { describeBoardPosition, getPieceKey } from '@utils';
+import { useSquarePatternSetting } from '@hooks';
+import { describeBoardPosition, getPieceKey, hatchBackgroundCss } from '@utils';
 import { DroppableSquare } from './DroppableSquare';
 import { useBoardKeyboard } from '../hooks/useBoardKeyboard';
 
@@ -47,6 +55,7 @@ export const InteractiveBoard = memo(function InteractiveBoard({
   onKeyboardApi
 }: InteractiveBoardProps) {
   const boardRef = useRef<HTMLDivElement | null>(null);
+  const [squarePattern] = useSquarePatternSetting();
   const {
     cursor,
     heldFrom,
@@ -152,18 +161,23 @@ export const InteractiveBoard = memo(function InteractiveBoard({
           ? { 'aria-activedescendant': activeDescendantId }
           : {})}
         data-arrow-keys="self"
+        data-square-pattern={squarePattern}
         onKeyDown={onKeyDown}
         onBlur={onBlur}
         className="grid grid-cols-8 grid-rows-8 overflow-hidden w-full h-full"
-        style={{
-          gap: 0,
-          zIndex: 1,
-          borderRadius: 0,
-          contain: 'layout style paint',
-          fontSize: 0,
-          lineHeight: 0,
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)'
-        }}
+        style={
+          {
+            gap: 0,
+            zIndex: 1,
+            borderRadius: 0,
+            contain: 'layout style paint',
+            fontSize: 0,
+            lineHeight: 0,
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+            '--board-light': lightSquare,
+            '--board-hatch': hatchBackgroundCss(lightSquare)
+          } as CSSProperties
+        }
       >
         {squares}
       </div>

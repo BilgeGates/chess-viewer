@@ -1,8 +1,17 @@
 import { memo, useEffect, useRef, useState } from 'react';
 
 import { BOARD_THEMES } from '@constants';
+import { useSquarePatternSetting } from '@hooks';
 
-import { getPieceKey, isLightSquare, logger, parseFEN } from '@utils';
+import {
+  drawBoardPiece,
+  fillBoardSquare,
+  getPieceKey,
+  isHatchedSquare,
+  isLightSquare,
+  logger,
+  parseFEN
+} from '@utils';
 
 interface MiniPreviewProps {
   fen: string;
@@ -25,6 +34,7 @@ export const MiniPreview = memo(
   }: MiniPreviewProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [hasError, setHasError] = useState(false);
+    const [squarePattern] = useSquarePatternSetting();
     const hasImages = Object.keys(pieceImages).length > 0;
     const isLoading = piecesLoading && !hasImages;
 
@@ -71,16 +81,18 @@ export const MiniPreview = memo(
           throw new Error('Invalid board structure');
         }
         const edge = (i: number) => Math.round((i * cssSize) / 8);
+        const fill = {
+          light: defaultLight,
+          dark: defaultDark,
+          pattern: squarePattern
+        };
         for (let row = 0; row < 8; row++) {
           for (let col = 0; col < 8; col++) {
             const x = edge(col);
             const y = edge(row);
             const w = edge(col + 1) - x;
             const h = edge(row + 1) - y;
-            ctx.fillStyle = isLightSquare(row, col)
-              ? defaultLight
-              : defaultDark;
-            ctx.fillRect(x, y, w, h);
+            fillBoardSquare(ctx, x, y, w, h, isLightSquare(row, col), fill);
           }
         }
         for (let row = 0; row < 8; row++) {
@@ -96,12 +108,18 @@ export const MiniPreview = memo(
                 const snap = (val: number) => Math.round(val * dpr) / dpr;
                 const pieceSize = snap(cellW * 0.9);
                 const offset = snap((cellW - pieceSize) / 2);
-                ctx.drawImage(
+                drawBoardPiece(
+                  ctx,
                   img,
                   x + offset,
                   y + offset,
                   pieceSize,
-                  pieceSize
+                  isHatchedSquare(isLightSquare(row, col), fill)
+                    ? {
+                        color: defaultLight,
+                        square: { x, y, width: cellW, height: cellW }
+                      }
+                    : null
                 );
               }
             }
@@ -115,7 +133,7 @@ export const MiniPreview = memo(
         canvas.width = 0;
         canvas.height = 0;
       };
-    }, [fen, lightSquare, darkSquare, pieceImages, size]);
+    }, [fen, lightSquare, darkSquare, squarePattern, pieceImages, size]);
     return (
       <div className="relative w-full" style={{ aspectRatio: '1 / 1' }}>
         <canvas

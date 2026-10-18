@@ -1,5 +1,5 @@
 import { createUltraQualityCanvas } from './canvasRenderer';
-import { changeDPI } from '@chessviewer-org/chess-viewer';
+import { changeDPI, type SquarePattern } from '@chessviewer-org/chess-viewer';
 import { createRasterBlob } from './exportRaster';
 import {
   cancelExport,
@@ -33,6 +33,7 @@ export interface ExportConfig {
   pieceImages: Record<string, HTMLImageElement>;
   flipped: boolean;
   showCoordinateBorder?: boolean;
+  squarePattern?: SquarePattern;
 }
 
 export interface ExportInfo {
