@@ -39,7 +39,7 @@ The LaTeX exporter turns the current position into ready-to-paste markup for the
 \showboard
 ```
 
-`\showinverseboard` replaces `\showboard` for a flipped board, and `\notationoff` precedes the diagram when coordinates are hidden.
+`\showinverseboard` replaces `\showboard` for a flipped board, and `\notationoff` precedes the diagram when coordinates are hidden, followed by `\notationon` afterwards — skak's switch is global, so this keeps later diagrams in the same document unaffected.
 
 ### chessboard
 
@@ -71,12 +71,12 @@ Extra keys are added only when they deviate from the package defaults, and the c
 
 ## Option Mapping
 
-| Board state         | skak                | chessboard     |
-| ------------------- | ------------------- | -------------- |
-| Default orientation | `\showboard`        | —              |
-| Flipped             | `\showinverseboard` | `inverse=true` |
-| Coordinates visible | —                   | —              |
-| Coordinates hidden  | `\notationoff`      | `label=false`  |
+| Board state         | skak                           | chessboard     |
+| ------------------- | ------------------------------ | -------------- |
+| Default orientation | `\showboard`                   | —              |
+| Flipped             | `\showinverseboard`            | `inverse=true` |
+| Coordinates visible | —                              | —              |
+| Coordinates hidden  | `\notationoff` … `\notationon` | `label=false`  |
 
 ---
 

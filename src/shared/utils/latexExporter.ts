@@ -78,8 +78,10 @@ function resolveFen(fen: unknown): string {
 
 function buildSkakBody(fen: string, config: LatexExportConfig): string[] {
   const lines = [`\\fenboard{${fen}}`];
-  if (config.showCoords === false) lines.push('\\notationoff');
+  const hideCoords = config.showCoords === false;
+  if (hideCoords) lines.push('\\notationoff');
   lines.push(config.flipped ? '\\showinverseboard' : '\\showboard');
+  if (hideCoords) lines.push('\\notationon');
   return lines;
 }
 

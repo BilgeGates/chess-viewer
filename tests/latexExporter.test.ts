@@ -77,7 +77,7 @@ describe('skak output', () => {
     assert.ok(!latex.includes('\\showinverseboard'));
   });
 
-  test('hidden coordinates emit \\notationoff before the diagram', () => {
+  test('hidden coordinates wrap the diagram in \\notationoff/\\notationon', () => {
     const lines = generateBoardLatex({
       fen: START_FEN,
       latexPackage: 'skak',
@@ -87,7 +87,8 @@ describe('skak output', () => {
       '\\usepackage{skak}',
       `\\fenboard{${START_FEN}}`,
       '\\notationoff',
-      '\\showboard'
+      '\\showboard',
+      '\\notationon'
     ]);
   });
 
@@ -98,6 +99,7 @@ describe('skak output', () => {
       showCoords: true
     });
     assert.ok(!latex.includes('\\notationoff'));
+    assert.ok(!latex.includes('\\notationon'));
   });
 
   test('flip and hidden coordinates combine', () => {
@@ -107,7 +109,11 @@ describe('skak output', () => {
       flipped: true,
       showCoords: false
     }).split('\n');
-    assert.deepEqual(lines.slice(2), ['\\notationoff', '\\showinverseboard']);
+    assert.deepEqual(lines.slice(2), [
+      '\\notationoff',
+      '\\showinverseboard',
+      '\\notationon'
+    ]);
   });
 
   test('chessboard keys never appear in skak output', () => {
