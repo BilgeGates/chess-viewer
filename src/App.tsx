@@ -6,8 +6,10 @@ import {
   useState
 } from 'react';
 import { flushSync } from 'react-dom';
+import { Router } from 'wouter';
 
 import { Navbar, useNavbarState } from '@/components/layout';
+import { navigateWithTransition } from '@/routes/navigation';
 import Routes from '@/routes/Router';
 import { FENBatchProvider, ModalProvider } from '@contexts';
 import {
@@ -19,10 +21,9 @@ import {
 } from '@hooks';
 
 import {
+  canAnimateViewTransition,
   isFollowingSystem,
-  readReducedMotionPreference,
   readThemeModePreference,
-  resolveReducedMotion,
   resolveThemeMode,
   systemThemeMode,
   THEME_MODE_CHANGE_EVENT,
@@ -52,14 +53,6 @@ function getInitialTheme(): ThemeMode {
   return resolveThemeMode(readThemeModePreference());
 }
 
-function canAnimateThemeReveal(): boolean {
-  return (
-    typeof document !== 'undefined' &&
-    'startViewTransition' in document &&
-    !resolveReducedMotion(readReducedMotionPreference())
-  );
-}
-
 function primeThemeReveal(next: ThemeMode): void {
   const root = document.documentElement;
   const x = window.innerWidth;
@@ -86,7 +79,7 @@ function App() {
 
   const applyTheme = useCallback((next: ThemeMode) => {
     if (next === themeRef.current) return;
-    if (!canAnimateThemeReveal()) {
+    if (!canAnimateViewTransition()) {
       setTheme(next);
       return;
     }
@@ -143,28 +136,30 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <FENBatchProvider>
-        <ModalProvider openAuthModal={openAuthModal}>
-          <div className="isolate-root shell-safe-area min-h-dvh md:h-screen md:overflow-hidden flex flex-col bg-bg text-fluid-base transition-colors duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
-            <a
-              href="#main-content"
-              className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-100 focus-visible:px-6 focus-visible:py-3 focus-visible:bg-accent focus-visible:text-bg focus-visible:rounded-xl focus-visible:shadow-lg focus-visible:font-semibold"
-            >
-              Skip to main content
-            </a>
+      <Router aroundNav={navigateWithTransition}>
+        <FENBatchProvider>
+          <ModalProvider openAuthModal={openAuthModal}>
+            <div className="isolate-root shell-safe-area min-h-dvh md:h-screen md:overflow-hidden flex flex-col bg-bg text-fluid-base transition-colors duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
+              <a
+                href="#main-content"
+                className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-100 focus-visible:px-6 focus-visible:py-3 focus-visible:bg-accent focus-visible:text-bg focus-visible:rounded-xl focus-visible:shadow-lg focus-visible:font-semibold"
+              >
+                Skip to main content
+              </a>
 
-            <Navbar {...navState} />
+              <Navbar {...navState} />
 
-            <main
-              id="main-content"
-              tabIndex={-1}
-              className="main-content-offset md:overscroll-trap flex-1 min-h-0 w-full min-w-0 max-w-full overflow-visible md:overflow-x-hidden md:overflow-y-auto focus:outline-none"
-            >
-              <Routes />
-            </main>
-          </div>
-        </ModalProvider>
-      </FENBatchProvider>
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="main-content-offset md:overscroll-trap flex-1 min-h-0 w-full min-w-0 max-w-full overflow-visible md:overflow-x-hidden md:overflow-y-auto focus:outline-none"
+              >
+                <Routes />
+              </main>
+            </div>
+          </ModalProvider>
+        </FENBatchProvider>
+      </Router>
     </ErrorBoundary>
   );
 }

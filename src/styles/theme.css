@@ -146,21 +146,27 @@
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
 }
 
-::view-transition-group(root) {
-  animation: none;
-}
-
 ::view-transition-old(root),
 ::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html[data-theme-transition]::view-transition-group(root) {
   animation: none;
 }
 
-::view-transition-old(root) {
+html[data-theme-transition]::view-transition-old(root),
+html[data-theme-transition]::view-transition-new(root) {
+  animation: none;
+}
+
+html[data-theme-transition]::view-transition-old(root) {
   animation: theme-old-fade var(--theme-old-fade-duration)
     var(--theme-old-fade-ease) forwards;
 }
 
-::view-transition-new(root) {
+html[data-theme-transition]::view-transition-new(root) {
   clip-path: circle(0 at var(--theme-reveal-x) var(--theme-reveal-y));
   animation: theme-circular-reveal var(--theme-reveal-duration)
     var(--theme-reveal-ease) forwards;

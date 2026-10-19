@@ -13,6 +13,7 @@ export * from './historyUtils';
 export * from './imageOptimizer';
 export * from './logger';
 export * from './pageScroll';
+export * from './viewTransition';
 export * from './pieceUtils';
 export * from './saveBlob';
 export * from './svgExporter';
