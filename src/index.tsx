@@ -21,7 +21,7 @@ const app = (
 function canHydrate(): boolean {
   return (
     root.hasChildNodes() &&
-    !document.documentElement.classList.contains('route-mismatch')
+    !document.documentElement.classList.contains('prerender-stale')
   );
 }
 
@@ -31,7 +31,7 @@ if (canHydrate()) {
   render(app, root);
 }
 
-document.documentElement.classList.remove('route-mismatch');
+document.documentElement.classList.remove('prerender-stale');
 
 if (import.meta.env.PROD) {
   void import('virtual:pwa-register').then(({ registerSW }) => {

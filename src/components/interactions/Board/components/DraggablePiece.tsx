@@ -57,7 +57,7 @@ export const DraggablePiece = memo(function DraggablePiece({
         width: size,
         height: size,
         opacity: isDragging ? 0 : disabled ? 0.5 : 1,
-        visibility: isDragging ? 'hidden' : 'visible',
+        visibility: isDragging ? 'hidden' : 'inherit',
         transition: isDragging
           ? 'none'
           : 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1)',
