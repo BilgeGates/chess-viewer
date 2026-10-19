@@ -1,10 +1,12 @@
-import { memo, type ReactNode, useCallback, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useMemo } from 'react';
+import { useLocation } from 'wouter';
 
 import { Code2 } from '@/assets/icons';
 
-import { DisplayOptions, LatexExportDialog } from '@/components/features';
+import { DisplayOptions } from '@/components/features';
 import BoardPreviewCanvas from '@/pages/ExportPage/components/BoardPreviewCanvas';
 import { ADVANCED_FEN_CONFIG } from '@constants';
+import { stageLatexPositions } from '@utils';
 
 import styles from '../styles/advanced-fen-layout.module.scss';
 import type { ExportFormat, useAdvancedFEN } from '../hooks/useAdvancedFEN';
@@ -79,9 +81,12 @@ const InteractiveBoardColumn = memo(function InteractiveBoardColumn({
     state.safeCurrentIndex
   ]);
 
-  const [isLatexOpen, setIsLatexOpen] = useState(false);
-  const openLatex = useCallback(() => setIsLatexOpen(true), []);
-  const closeLatex = useCallback(() => setIsLatexOpen(false), []);
+  const [, navigate] = useLocation();
+  const { validFens, isFlipped } = state;
+  const openLatex = useCallback(() => {
+    stageLatexPositions(validFens.map((fen) => ({ fen, flipped: isFlipped })));
+    navigate('/latex');
+  }, [validFens, isFlipped, navigate]);
 
   return (
     <div
@@ -141,21 +146,15 @@ const InteractiveBoardColumn = memo(function InteractiveBoardColumn({
         <button
           type="button"
           onClick={openLatex}
-          disabled={!state.currentFen}
+          disabled={!validFens.length}
           className="w-full min-h-11 flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-surface px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-elevated hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Code2 className="w-4 h-4" aria-hidden="true" />
-          Copy as LaTeX
+          {validFens.length > 1
+            ? `Open all ${validFens.length} in LaTeX Studio`
+            : 'Open in LaTeX Studio'}
         </button>
       </div>
-
-      <LatexExportDialog
-        isOpen={isLatexOpen}
-        onClose={closeLatex}
-        fen={state.currentFen}
-        flipped={state.isFlipped}
-        showCoords={state.showCoordsLocal}
-      />
 
       {state.activeTab === 'preview-style' && (
         <div className="mt-1 ml-[5%] w-[95%]">

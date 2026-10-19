@@ -92,8 +92,8 @@ export const CommandBar = memo(function CommandBar({
           type="button"
           onClick={onCopyLatex}
           className={`${iconButton} text-text-secondary hover:text-text-primary hover:bg-surface-hover`}
-          title="Copy as LaTeX"
-          aria-label="Copy position as LaTeX markup"
+          title="Open in LaTeX Studio"
+          aria-label="Open this position in LaTeX Studio"
         >
           <Code2 className="w-5 h-5" />
         </button>

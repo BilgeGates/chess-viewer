@@ -7,6 +7,7 @@ import {
   useRef,
   useState
 } from 'react';
+import { useLocation } from 'wouter';
 
 import {
   useDatabaseSearch,
@@ -19,10 +20,11 @@ import {
   buildManualDatabaseUrl,
   MANUAL_PROVIDER_HOME_URL,
   MANUAL_PROVIDER_LABEL,
-  type ManualDatabaseProvider
+  type ManualDatabaseProvider,
+  stageLatexPositions
 } from '@utils';
 
-import { DisplayOptions, LatexExportDialog } from '@components/features';
+import { DisplayOptions } from '@components/features';
 import {
   type BoardKeyboardApi,
   InteractiveBoard,
@@ -206,9 +208,11 @@ export const ChessEditor = memo(function ChessEditor({
   const handleShare = useCallback(() => setIsShareOpen(true), []);
   const closeShare = useCallback(() => setIsShareOpen(false), []);
 
-  const [isLatexOpen, setIsLatexOpen] = useState(false);
-  const handleCopyLatex = useCallback(() => setIsLatexOpen(true), []);
-  const closeLatex = useCallback(() => setIsLatexOpen(false), []);
+  const [, navigate] = useLocation();
+  const handleOpenLatex = useCallback(() => {
+    stageLatexPositions([{ fen, flipped }]);
+    navigate('/latex');
+  }, [fen, flipped, navigate]);
 
   const { payload, copyLink } = useShareBoard({
     fen,
@@ -229,7 +233,7 @@ export const ChessEditor = memo(function ChessEditor({
     canRedo,
     onFlip: onFlip ?? (() => {}),
     onCopyImage: handleCopyFen,
-    onCopyLatex: handleCopyLatex,
+    onCopyLatex: handleOpenLatex,
     onShare: handleShare,
     onDownload
   };
@@ -377,15 +381,6 @@ export const ChessEditor = memo(function ChessEditor({
             onOpenManualProvider={handleOpenManualProvider}
           />
         </div>
-
-        <LatexExportDialog
-          isOpen={isLatexOpen}
-          onClose={closeLatex}
-          fen={fen}
-          flipped={flipped}
-          showCoords={showCoords}
-          {...(onNotify ? { onNotify } : {})}
-        />
 
         <ShareDialog
           isOpen={isShareOpen}
