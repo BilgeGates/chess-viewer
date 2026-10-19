@@ -160,7 +160,6 @@ export const InteractiveBoard = memo(function InteractiveBoard({
         {...(activeDescendantId
           ? { 'aria-activedescendant': activeDescendantId }
           : {})}
-        data-arrow-keys="self"
         data-square-pattern={squarePattern}
         onKeyDown={onKeyDown}
         onBlur={onBlur}

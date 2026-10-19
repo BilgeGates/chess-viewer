@@ -17,7 +17,6 @@ import {
   PageTabs
 } from '@/components/layout';
 import { useAuth } from '@/auth';
-import { pageScrollToY } from '@utils';
 
 import { Seo } from '@ui';
 import {
@@ -82,13 +81,13 @@ const SettingsPage = memo(function SettingsPage() {
   const handleSelect = useCallback(
     (tabId: string) => {
       setSearchParams({ tab: tabId });
-      pageScrollToY(0);
+      window.scrollTo(0, 0);
     },
     [setSearchParams]
   );
 
   return (
-    <div className="min-h-full bg-bg md:h-full md:max-h-full">
+    <div className="flex-1 bg-bg">
       <Seo name="Settings" noindex />
       <PageSidebarLayout
         contentRef={contentRef}

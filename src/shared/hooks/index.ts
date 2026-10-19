@@ -35,8 +35,7 @@ export { useInteractiveBoard } from './useInteractiveBoard';
 export {
   useEditorKeyboard,
   useEscapeKey,
-  useListboxKeyboard,
-  usePageScrollKeys
+  useListboxKeyboard
 } from './useKeyboard';
 export { useDebouncedCommit, useLocalStorage } from './useLocalStorage';
 export { useNotifications } from './useNotifications';

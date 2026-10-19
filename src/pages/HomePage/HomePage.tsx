@@ -63,7 +63,7 @@ const HomePage: React.FC = () => {
       <h1 className="sr-only">
         Free Chess Diagram Generator — FEN to PNG, JPEG &amp; SVG
       </h1>
-      <div className="page-container w-full bg-bg py-2 overflow-x-hidden min-h-full md:h-full flex flex-col justify-safe-center">
+      <div className="page-container w-full bg-bg py-2 overflow-x-clip flex-1 flex flex-col justify-safe-center">
         <div className="flex flex-col gap-fluid-xs md:gap-3 pt-1.5 md:pt-0">
           <div className="min-w-0">
             <FenToolbar

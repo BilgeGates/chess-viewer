@@ -19,7 +19,6 @@ import {
   PageTabs
 } from '@/components/layout';
 import { getRouteSeo, ORGANIZATION_SCHEMA, WEBSITE_SCHEMA } from '@constants';
-import { pageScrollToY } from '@utils';
 
 import { Seo } from '@ui';
 import {
@@ -86,13 +85,13 @@ const AboutPage = memo(function AboutPage() {
   const handleSelect = useCallback(
     (tabId: string) => {
       setSearchParams({ tab: tabId });
-      pageScrollToY(0);
+      window.scrollTo(0, 0);
     },
     [setSearchParams]
   );
 
   return (
-    <div className="min-h-full bg-bg md:h-full md:max-h-full">
+    <div className="flex-1 bg-bg">
       <Seo
         {...getRouteSeo('/about')}
         schema={[WEBSITE_SCHEMA, ORGANIZATION_SCHEMA]}

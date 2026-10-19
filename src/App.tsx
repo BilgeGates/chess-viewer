@@ -15,7 +15,6 @@ import { FENBatchProvider, ModalProvider } from '@contexts';
 import {
   useColorVision,
   useContrast,
-  usePageScrollKeys,
   useReducedMotionPreference,
   useThemeModeSync
 } from '@hooks';
@@ -68,8 +67,6 @@ function App() {
   const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
   const themeRef = useRef<ThemeMode>(theme);
   themeRef.current = theme;
-
-  usePageScrollKeys();
 
   useThemeModeSync();
 
@@ -139,7 +136,7 @@ function App() {
       <Router aroundNav={navigateWithTransition}>
         <FENBatchProvider>
           <ModalProvider openAuthModal={openAuthModal}>
-            <div className="isolate-root shell-safe-area min-h-dvh md:h-screen md:overflow-hidden flex flex-col bg-bg text-fluid-base transition-colors duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
+            <div className="isolate-root shell-safe-area min-h-dvh flex flex-col bg-bg text-fluid-base transition-colors duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]">
               <a
                 href="#main-content"
                 className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-100 focus-visible:px-6 focus-visible:py-3 focus-visible:bg-accent focus-visible:text-bg focus-visible:rounded-xl focus-visible:shadow-lg focus-visible:font-semibold"
@@ -152,7 +149,7 @@ function App() {
               <main
                 id="main-content"
                 tabIndex={-1}
-                className="main-content-offset md:overscroll-trap flex-1 min-h-0 w-full min-w-0 max-w-full overflow-visible md:overflow-x-hidden md:overflow-y-auto focus:outline-none"
+                className="main-content-offset flex-1 flex flex-col w-full min-w-0 focus:outline-none"
               >
                 <Routes />
               </main>

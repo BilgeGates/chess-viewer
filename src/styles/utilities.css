@@ -47,9 +47,6 @@
 .isolate-root {
   isolation: isolate;
 }
-.overscroll-trap {
-  overscroll-behavior: contain;
-}
 .workspace-container {
   container-type: inline-size;
 }
@@ -83,7 +80,6 @@ html {
 @media (pointer: coarse), (max-width: 1023px) {
   body {
     background-attachment: scroll;
-    overscroll-behavior-y: auto;
   }
 }
 

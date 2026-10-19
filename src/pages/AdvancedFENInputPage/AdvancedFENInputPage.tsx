@@ -71,7 +71,7 @@ const AdvancedFENInputPage = memo(function AdvancedFENInputPage(
   );
 
   return (
-    <div className="bg-bg min-h-full md:h-full md:max-h-full">
+    <div className="flex-1 bg-bg">
       <Seo
         {...getRouteSeo('/advanced-fen')}
         schema={[SOFTWARE_APP_SCHEMA, ADVANCED_FEN_BREADCRUMB_SCHEMA]}

@@ -1,13 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  isTextEntryTarget,
-  ownsArrowKeys,
-  getPageViewportHeight,
-  canPageScroll,
-  pageScrollBy,
-  pageScrollToY,
-  getPageScrollMax
-} from '@utils';
+import { isTextEntryTarget } from '@utils';
 
 export function useEscapeKey(onEscape: () => void): void {
   useEffect(() => {
@@ -17,64 +9,6 @@ export function useEscapeKey(onEscape: () => void): void {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onEscape]);
-}
-
-export interface PageScrollKeysOptions {
-  enabled?: boolean;
-  scrollStep?: number;
-}
-
-export function usePageScrollKeys(options: PageScrollKeysOptions = {}): void {
-  const { enabled = true, scrollStep = 80 } = options;
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.defaultPrevented) return;
-      if (isTextEntryTarget(e.target) || ownsArrowKeys(e.target)) return;
-
-      const viewport = getPageViewportHeight();
-      switch (e.key) {
-        case 'ArrowDown':
-          if (!canPageScroll(1)) return;
-          e.preventDefault();
-          pageScrollBy(scrollStep);
-          break;
-        case 'ArrowUp':
-          if (!canPageScroll(-1)) return;
-          e.preventDefault();
-          pageScrollBy(-scrollStep);
-          break;
-        case 'PageDown':
-          if (!canPageScroll(1)) return;
-          e.preventDefault();
-          pageScrollBy(viewport * 0.9);
-          break;
-        case 'PageUp':
-          if (!canPageScroll(-1)) return;
-          e.preventDefault();
-          pageScrollBy(-viewport * 0.9);
-          break;
-        case 'Home':
-          if (!canPageScroll(-1)) return;
-          e.preventDefault();
-          pageScrollToY(0);
-          break;
-        case 'End':
-          if (!canPageScroll(1)) return;
-          e.preventDefault();
-          pageScrollToY(getPageScrollMax());
-          break;
-        default:
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [enabled, scrollStep]);
 }
 
 export interface EditorKeyboardActions {
