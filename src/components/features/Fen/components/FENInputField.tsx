@@ -28,6 +28,7 @@ interface FENInputFieldProps {
   error?: string;
   onPaste?: () => void;
   onNotification?: (message: string, type: NotificationType) => void;
+  allowBatch?: boolean;
 }
 
 export const FENInputField = memo(
@@ -37,7 +38,8 @@ export const FENInputField = memo(
     onBlur,
     error: externalError,
     onPaste,
-    onNotification
+    onNotification,
+    allowBatch = true
   }: FENInputFieldProps) {
     const { addToBatch } = useFENBatch();
     const { isFavorite, toggleFavorite } = useFavoriteFen({
@@ -142,7 +144,7 @@ export const FENInputField = memo(
           <FENInputToolbar
             isFavorite={isFavorite}
             onPaste={onPaste}
-            onAddToBatch={handleAddToBatch}
+            onAddToBatch={allowBatch ? handleAddToBatch : undefined}
             onToggleFavorite={handleToggleFavorite}
             onStartPosition={handleStartPosition}
             onClearBoard={handleClearBoard}

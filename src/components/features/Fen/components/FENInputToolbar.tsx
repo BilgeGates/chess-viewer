@@ -6,7 +6,7 @@ import styles from '../styles/fen-toolbar.module.scss';
 interface FENInputToolbarProps {
   isFavorite: boolean;
   onPaste?: (() => void) | undefined;
-  onAddToBatch: () => void;
+  onAddToBatch?: (() => void) | undefined;
   onToggleFavorite: () => void;
 
   onStartPosition: () => void;
@@ -48,20 +48,22 @@ export const FENInputToolbar = memo(function FENInputToolbar({
       <GroupDivider />
 
       <div className={styles['btnGroup']}>
-        <button
-          onClick={onAddToBatch}
-          className={`${styles['toolbarBtnBase']} ${styles['toolbarBtnNeutral']}`}
-          title="Add to batch (no redirect)"
-          aria-label="Add to batch"
-          type="button"
-        >
-          <Plus
-            className={styles['toolbarBtnIcon']}
-            strokeWidth={2.5}
-            aria-hidden="true"
-          />
-          <span>Add</span>
-        </button>
+        {onAddToBatch && (
+          <button
+            onClick={onAddToBatch}
+            className={`${styles['toolbarBtnBase']} ${styles['toolbarBtnNeutral']}`}
+            title="Add to batch (no redirect)"
+            aria-label="Add to batch"
+            type="button"
+          >
+            <Plus
+              className={styles['toolbarBtnIcon']}
+              strokeWidth={2.5}
+              aria-hidden="true"
+            />
+            <span>Add</span>
+          </button>
+        )}
 
         <button
           onClick={onToggleFavorite}
