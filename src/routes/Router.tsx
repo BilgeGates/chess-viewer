@@ -7,6 +7,7 @@ import {
   SettingsPage,
   FENHistoryPage,
   AdvancedFENInputPage,
+  LatexPage,
   NotFoundPage,
   SignInPage,
   SignUpPage,
@@ -34,6 +35,9 @@ function AppRoutes() {
       </Route>
       <Route path="/advanced-fen">
         <AdvancedFENInputPage />
+      </Route>
+      <Route path="/latex">
+        <LatexPage />
       </Route>
 
       <Route path="/auth/sign-in">

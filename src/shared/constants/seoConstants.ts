@@ -225,6 +225,12 @@ const ROUTE_SEO: Record<string, SeoMeta> = {
     description:
       'Batch-convert multiple FEN positions to chess diagrams at once. Export high-resolution PNG, JPEG, and SVG files bundled as a ZIP. The fastest way to generate dozens of chess diagrams — free.'
   },
+  '/latex': {
+    name: 'LaTeX Studio',
+    path: '/latex',
+    description:
+      'Generate LaTeX for chess diagrams and problem collections. Build complete documents with the skak, chessboard or chess-problem-diagrams packages, add authors, stipulations and solutions, then copy the code or download the .tex file — free, in your browser.'
+  },
   '/export': {
     name: 'Export',
     path: '/export',

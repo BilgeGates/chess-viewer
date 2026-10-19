@@ -11,6 +11,7 @@ export * from './exportRaster';
 export * from './exportState';
 export * from './historyUtils';
 export * from './imageOptimizer';
+export * from './latexHandoff';
 export * from './logger';
 export * from './pageScroll';
 export * from './viewTransition';

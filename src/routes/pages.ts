@@ -2,6 +2,7 @@ export { default as HomePage } from '@/pages/HomePage/HomePage';
 export { default as AboutPage } from '@/pages/AboutPage/AboutPage';
 export { default as ExportPage } from '@/pages/ExportPage/ExportPage';
 export { default as SettingsPage } from '@/pages/SettingsPage/SettingsPage';
+export { default as LatexPage } from '@/pages/LatexPage/LatexPage';
 export { default as FENHistoryPage } from '@/pages/FENHistoryPage/FENHistoryPage';
 export { default as AdvancedFENInputPage } from '@/pages/AdvancedFENInputPage/AdvancedFENInputPage';
 export { default as NotFoundPage } from '@/pages/NotFoundPage';
