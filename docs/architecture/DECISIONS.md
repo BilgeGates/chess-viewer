@@ -135,7 +135,9 @@ Records of key architectural and technical decisions made during ChessViewer's d
 
 ## ADR-011: Web Workers for Large Exports
 
-**Date:** 2026-04-17 | **Status:** Accepted
+**Date:** 2026-04-17 | **Status:** Superseded (2026-10)
+
+**Superseded:** the worker path never succeeded in practice — `createImageBitmap` in a worker cannot decode SVG blobs that embed `data:image/png` pieces, so every export fell back to the main-thread canvas. The worker and `workerRasterExport.ts` were removed; rasterisation runs on the canvas path, and the Safari disposal constraint below still applies.
 
 **Decision:** SVG-to-raster conversion for exports above 4,000 px routes through `svgRasterWorker.ts` via `OffscreenCanvas`. Never call `canvasRenderer` synchronously on the main thread for export-size operations.
 

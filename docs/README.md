@@ -16,7 +16,7 @@ Technical documentation for ChessViewer v6.1.0.
 ## Reference
 
 - [Export Pipeline](reference/EXPORT_PIPELINE.md) — Quality presets, resolution tables, pipeline flow, browser limits, file reference
-- [LaTeX Export](reference/LATEX_EXPORT.md) — skak and chessboard markup, option mapping, FEN safety gates
+- [LaTeX Studio](reference/LATEX_EXPORT.md) — the `/latex` page, skak / chessboard / chess-problem-diagrams markup, document settings, TeX installation, safety gates
 - [FEN Notation](reference/FEN.md) — FEN format, validation rules, parser implementation
 - [Accessibility](reference/ACCESSIBILITY.md) — Current status, known gaps, planned improvements
 

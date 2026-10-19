@@ -18,25 +18,14 @@ The interactive board editor is now operable end-to-end without a mouse: it expo
 - Enter / Space — activate buttons and checkboxes
 - Escape — close modals
 - **Arrow Up/Down, PageUp/PageDown, Home/End, Space — scroll the page on every
-  route.** Mounted app-wide via `usePageScrollKeys`
-  (`src/shared/hooks/usePageScrollKeys.ts`, called once in `App.tsx`). It resolves
-  the active scroll region via `getScrollContainer` (`src/shared/utils/pageScroll.ts`)
-  in this order: (1) the nearest scrollable ancestor of the focused element;
-  (2) an explicit `[data-page-scroll]` container if it overflows; (3) the shell
-  `#main-content` overflow if it overflows; (4) the largest scrollable descendant
-  inside `#main-content`; (5) the document/window (mobile).
-  - **Fix (June 2026):** steps 2 and 4 were added because the resolver previously
-    only looked at `#main-content` or a `<main>` landmark. On the highest-traffic
-    content routes (About, Settings) the scroll actually lives on an inner `<div>`
-    that owns `lg:overflow-y-auto`, so `#main-content` itself never overflows and
-    the keys silently did nothing. About/Settings/FEN-history now carry
-    `data-page-scroll`, and the descendant scan catches any future page whose
-    scroll lives on an anonymous element.
-  - Suppressed while typing in a field, inside an open dialog/listbox/menu, while
-    a control that owns the arrow keys has focus (the board grid, range sliders,
-    identified via `data-arrow-keys="self"`), or when another handler already
-    claimed the key (`event.defaultPrevented` — e.g. a settings tablist or accent
-    radiogroup roving-arrow), so the page never double-acts.
+  route.** The document itself scrolls (`#main-content` has no overflow of its
+  own), so the browser handles these keys natively. The board grid and range
+  sliders keep their own arrow-key behaviour because they consume the keys
+  while focused.
+  - **Changed (October 2026):** the app-wide `usePageScrollKeys` hook and its
+    scroll-container resolver (`pageScroll.ts`, `[data-page-scroll]`,
+    `data-arrow-keys="self"`) were removed together with the nested scroll
+    container they existed to work around.
 - Editor action shortcuts (`useEditorKeyboard`): `F` flip · `Ctrl/Cmd+Z` undo ·
   `Ctrl/Cmd+Y` / `Ctrl/Cmd+Shift+Z` redo · `Delete`/`Backspace` remove the
   selected piece · `Escape` clear selection.

@@ -1,6 +1,6 @@
-# LaTeX Export
+# LaTeX Studio
 
-Technical reference for the **Copy as LaTeX** feature ([issue #165](https://github.com/chessviewer-org/chess-viewer/issues/165)).
+Technical reference for the **LaTeX Studio** page at `/latex` ([issue #165](https://github.com/chessviewer-org/chess-viewer/issues/165)).
 
 ---
 
@@ -10,6 +10,7 @@ Technical reference for the **Copy as LaTeX** feature ([issue #165](https://gith
 - [Supported Packages](#supported-packages)
 - [Installing TeX](#installing-tex)
 - [Output Modes](#output-modes)
+- [Document Settings](#document-settings)
 - [Option Mapping](#option-mapping)
 - [Validation and Safety](#validation-and-safety)
 - [API](#api)
@@ -20,15 +21,21 @@ Technical reference for the **Copy as LaTeX** feature ([issue #165](https://gith
 
 ## Overview
 
-The LaTeX exporter turns the current position into ready-to-paste markup for the two chess packages most commonly used in books, bulletins, and academic papers. Nothing is rendered or compiled in the browser — the output is plain text copied to the clipboard.
+LaTeX Studio is a standalone page that turns one or many positions into LaTeX for books, bulletins and problem collections. Nothing is rendered or compiled in the browser — the output is plain text that you copy or download as a `.tex` file.
 
-- Two packages: `skak` and `chessboard`
-- Board orientation (flip) is carried into the markup
-- Coordinate visibility is carried into the markup
-- Snippet or full compilable document
-- Four diagram sizes: `tiny`, `small`, `normal`, `large` (10/15/20/30 pt per square)
-- Side-to-move marker on or off (`chessboard` only)
-- Out of scope for this release: move lists, PDF generation, `xskak`, `chessfss`
+- Three packages: `skak`, `chessboard` and `diagram` (`chess-problem-diagrams`)
+- Up to 100 positions, added with the regular FEN input (paste, favourites, start/clear), reordered, duplicated, filtered or pasted in bulk (`FEN | author | source | stipulation`)
+- Per-position problem details: stipulation, author, source, award, remark, solution and caption
+- `chessboard` highlights, circles and arrows
+- Snippet, full document or cropped standalone figure
+- Document class, paper, font size, margin, title page, columns, numbering, piece count and a Solutions section
+- Four diagram sizes: `tiny`, `small`, `normal`, `large`
+- Per-position previous/next navigation and "Use these details for all"
+- A layout check that warns when boards are wider than their column and offers the column count that fits
+- Live preview of the page and syntax-coloured code, copy, `.tex` download and the exact `tlmgr` and `pdflatex` commands
+- Preview coordinates follow the site theme (white on dark, black on light); the LaTeX output always prints them in black
+- The project is kept in `localStorage` (`cv_latex_project`), can be saved to and opened from a `.json` file, and Undo reverses delete, new project and open
+- Layout: three columns on desktop, two on tablets and tabs with a fixed Copy / Download bar on phones
 
 ---
 
@@ -51,6 +58,20 @@ The LaTeX exporter turns the current position into ready-to-paste markup for the
 \chessboard[setfen=rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1]
 ```
 
+Highlighted squares, circles and arrows become `markfields` and `markmoves` keys grouped by style and colour, with an `\definecolor` line per colour:
+
+```latex
+\chessboard[
+  setfen=…,
+  pgfstyle=color,
+  color=cvFFEB3B!55,
+  markfields={e4,d5},
+  pgfstyle=straightmove,
+  color=cv15781B,
+  markmoves={e2-e4}
+]
+```
+
 Extra keys are added only when they deviate from the package defaults, and the command switches to a multi-line key list as soon as there is more than one key:
 
 ```latex
@@ -61,22 +82,38 @@ Extra keys are added only when they deviate from the package defaults, and the c
 ]
 ```
 
+### diagram
+
+```latex
+\usepackage[11pt]{diagram}
+\begin{diagram}
+\author{Loyd, Sam}
+\source{Chess Monthly, 1903}
+\award{1st Prize}
+\stipulation{\#2}
+\fen[2+1]{8/8/8/3k4/8/4K3/3Q4/8}
+\end{diagram}
+```
+
+The `chess-problem-diagrams` package prints the hatched, framed boards of printed problem books with the header and footer filled in. The piece count is computed from the FEN, and only the placement field is passed because the package would read castling letters as pieces. White is always at the bottom and there are no coordinates. Authors are written `Surname, First name`; a plain `First Last` is rewritten and several authors are separated by `;`. Board size selects the package font size (`tiny` and `small` use 10 pt, `normal` 11 pt, `large` 12 pt).
+
 ---
 
 ## Installing TeX
 
-The exported markup needs a TeX distribution that includes `skak` and `chessboard`. A minimal installation is not enough, because both packages load helpers from larger collections:
+The exported markup needs a TeX distribution that includes the package you chose. A minimal installation is not enough, because the packages load helpers from larger collections:
 
 | Package      | Also needs                                                   |
 | ------------ | ------------------------------------------------------------ |
 | `skak`       | `lambda.sty` (TeX Live package `lambda-lists`)               |
 | `chessboard` | `xifthen.sty` and `pgf` (TeX Live packages `xifthen`, `pgf`) |
+| `diagram`    | `pgf` (TeX Live package `pgf`)                               |
 
-Both compile with `pdflatex` and can be loaded side by side in one document.
+All three compile with `pdflatex` and can be loaded side by side in one document. Document mode also needs `geometry` and standalone figures need `standalone`; both ship with the commands below. The Studio shows the exact `tlmgr install` line for the current settings.
 
 ### No installation
 
-[Overleaf](https://www.overleaf.com) ships both packages. Create a project, paste the full-document output and compile.
+[Overleaf](https://www.overleaf.com) ships all three packages. Create a project, paste the full-document output and compile.
 
 ### Linux
 
@@ -91,7 +128,7 @@ sudo apt install texlive-latex-base texlive-latex-recommended texlive-latex-extr
 **Fedora, RHEL, Rocky Linux, AlmaLinux and other Fedora derivatives**
 
 ```bash
-sudo dnf install texlive-scheme-basic texlive-skak texlive-chessboard texlive-lambda-lists texlive-xifthen texlive-pgf
+sudo dnf install texlive-scheme-basic texlive-skak texlive-chessboard texlive-chess-problem-diagrams texlive-lambda-lists texlive-xifthen texlive-pgf texlive-geometry texlive-standalone
 ```
 
 **Arch Linux, Manjaro, EndeavourOS and other Arch derivatives**
@@ -105,7 +142,7 @@ If disk space is not a concern, each family also offers everything in one step: 
 Any distribution can use the upstream installer from [tug.org/texlive](https://tug.org/texlive/), then:
 
 ```bash
-sudo tlmgr install skak chessboard
+sudo tlmgr install skak chessboard chess-problem-diagrams
 ```
 
 `tlmgr` resolves `lambda-lists`, `xifthen` and `pgf` on its own.
@@ -118,111 +155,153 @@ Install [MiKTeX](https://miktex.org/download), which downloads missing packages 
 winget install MiKTeX.MiKTeX
 ```
 
-Choose **Always install missing packages on-the-fly** during setup (or later under MiKTeX Console → Settings), then compile as usual. Alternatively install TeX Live with the `install-tl-windows.exe` installer from [tug.org/texlive](https://tug.org/texlive/) and run `tlmgr install skak chessboard`.
+Choose **Always install missing packages on-the-fly** during setup (or later under MiKTeX Console → Settings), then compile as usual. Alternatively install TeX Live with the `install-tl-windows.exe` installer from [tug.org/texlive](https://tug.org/texlive/) and run `tlmgr install skak chessboard chess-problem-diagrams`.
 
 ### macOS
 
-Install [MacTeX](https://tug.org/mactex/) with Homebrew. The full distribution already contains both packages:
+Install [MacTeX](https://tug.org/mactex/) with Homebrew. The full distribution already contains all three packages:
 
 ```bash
 brew install --cask mactex-no-gui
 ```
 
-For a smaller download, install BasicTeX and add the two packages. Open a new terminal afterwards so `pdflatex` is on the `PATH`:
+For a smaller download, install BasicTeX and add the packages. Open a new terminal afterwards so `pdflatex` is on the `PATH`:
 
 ```bash
 brew install --cask basictex
 sudo tlmgr update --self
-sudo tlmgr install skak chessboard
+sudo tlmgr install skak chessboard chess-problem-diagrams
 ```
 
 ### Check the installation
 
 ```bash
-kpsewhich skak.sty chessboard.sty
+kpsewhich skak.sty chessboard.sty diagram.sty
 ```
 
-Both paths must be printed. If one is missing, install the package from the list above. A missing helper shows up while compiling as `File 'lambda.sty' not found` (skak) or `File 'xifthen.sty' not found` (chessboard).
+Every path must be printed. If one is missing, install the package from the list above. A missing helper shows up while compiling as `File 'lambda.sty' not found` (skak) or `File 'xifthen.sty' not found` (chessboard).
 
 ---
 
 ## Output Modes
 
-| Mode       | Result                                                        |
-| ---------- | ------------------------------------------------------------- |
-| `snippet`  | `\usepackage{…}` line plus the diagram commands (default)     |
-| `document` | `\documentclass{article}` … `\end{document}` — compiles as-is |
+| Mode         | Result                                                                         |
+| ------------ | ------------------------------------------------------------------------------ |
+| `snippet`    | `\usepackage{…}` line plus the diagram commands (default for the library)      |
+| `document`   | `\documentclass` … `\end{document}` — compiles as-is                           |
+| `standalone` | `\documentclass[border=6pt,varwidth=170mm]{standalone}` — a cropped figure PDF |
+
+---
+
+## Document Settings
+
+| Setting                | Values                                  | Applies to           |
+| ---------------------- | --------------------------------------- | -------------------- |
+| Document class         | `article`, `report`, `book`             | `document`           |
+| Paper                  | `a4`, `a5`, `letter`                    | `document`           |
+| Font size              | 10, 11, 12 pt                           | `document`           |
+| Margin                 | 5–50 mm                                 | `document`           |
+| Title, document author | text                                    | `document`           |
+| Diagrams per row       | 1–4 (laid out with `minipage`)          | every mode           |
+| Board size             | `tiny`, `small`, `normal`, `large`      | every mode           |
+| Numbering              | `No. n` above each board                | every mode           |
+| Piece count            | `(white+black)` next to the stipulation | `skak`, `chessboard` |
+| Solutions section      | lists every entered solution at the end | every mode           |
+
+Large boards need fewer columns; a board wider than its column overlaps its neighbour. Text containing the Azerbaijani schwa (`ə`, `Ə`) adds a `graphicx` based declaration so pdfLaTeX can set it with the `T1` encoding.
 
 ---
 
 ## Option Mapping
 
-| Board state            | skak                           | chessboard           |
-| ---------------------- | ------------------------------ | -------------------- |
-| Default orientation    | `\showboard`                   | —                    |
-| Flipped                | `\showinverseboard`            | `inverse=true`       |
-| Coordinates visible    | —                              | —                    |
-| Coordinates hidden     | `\notationoff` … `\notationon` | `label=false`        |
-| Size other than normal | `\smallboard` … `\normalboard` | `boardfontsize=15pt` |
-| Side-to-move hidden    | — (needs PostScript)           | `showmover=false`    |
+| Board state            | skak                           | chessboard                |
+| ---------------------- | ------------------------------ | ------------------------- |
+| Default orientation    | `\showboard`                   | —                         |
+| Flipped                | `\showinverseboard`            | `inverse=true`            |
+| Coordinates visible    | —                              | —                         |
+| Coordinates hidden     | `\notationoff` … `\notationon` | `label=false`             |
+| Size other than normal | `\smallboard` … `\normalboard` | `boardfontsize=15pt`      |
+| Side-to-move hidden    | — (needs PostScript)           | `showmover=false`         |
+| Highlights and arrows  | —                              | `markfields`, `markmoves` |
 
 ---
 
 ## Validation and Safety
 
-The FEN is the only caller-controlled value that reaches the output, so it passes three gates before it is written into a LaTeX command:
+Two kinds of caller-controlled values reach the output: the FEN and free text.
+
+The FEN passes three gates before it is written into a LaTeX command:
 
 1. `normalizeFEN` — trims, completes a placement-only FEN, and throws on structural damage
 2. `validateFENDetailed` and `MAX_FEN_LENGTH` — full six-field validation and length ceiling
 3. An allowlist — `/^[A-Za-z0-9/ -]+$/`
 
-The allowlist is what keeps `\`, `{`, `}`, `%`, and `$` out of the markup, so a hostile FEN cannot close the argument and inject `\input` or `\write18`. Rejected input throws `LaTeX export failed: <reason>`; nothing is ever escaped and emitted anyway.
+The allowlist is what keeps `\`, `{`, `}`, `%`, and `$` out of the markup, so a hostile FEN cannot close the argument and inject `\input` or `\write18`. Rejected input throws `LaTeX export failed: <reason>`.
+
+Free text (caption, author, source, award, stipulation, remark, solution, title) is escaped with `escapeLatex`, which rewrites `\ & % $ # _ { } ~ ^`, strips control characters and caps every field at 2000 characters. That is why `#2`, `50%` and `R&D` can be typed as-is. Highlights and arrows are validated as squares and six-digit hex colours; anything else throws.
+
+The stored project is untrusted on load: `sanitizeProject` rebuilds every field, clamps lengths, checks enums and colours, and regenerates duplicate ids. The sessionStorage hand-off from the editor is validated the same way.
 
 ---
 
 ## API
 
 ```ts
-import { generateBoardLatex } from '@chessviewer-org/chess-viewer';
+import {
+  generateBoardLatex,
+  generateLatexDocument
+} from '@chessviewer-org/chess-viewer';
 
-const latex = generateBoardLatex({
+const snippet = generateBoardLatex({
   fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
   latexPackage: 'chessboard',
   flipped: true,
-  showCoords: false,
-  mode: 'snippet'
+  showCoords: false
+});
+
+const book = generateLatexDocument({
+  latexPackage: 'diagram',
+  mode: 'document',
+  columns: 2,
+  solutions: true,
+  positions: [
+    {
+      fen: '8/8/8/3k4/8/4K3/3Q4/8 w - - 0 1',
+      author: 'Loyd, Sam',
+      stipulation: '#2',
+      solution: '1.Qd2-c3!'
+    }
+  ]
 });
 ```
 
-| Field          | Type                                       | Default     |
-| -------------- | ------------------------------------------ | ----------- |
-| `fen`          | `string`                                   | required    |
-| `latexPackage` | `'skak' \| 'chessboard'`                   | `'skak'`    |
-| `flipped`      | `boolean`                                  | `false`     |
-| `showCoords`   | `boolean`                                  | `true`      |
-| `mode`         | `'snippet' \| 'document'`                  | `'snippet'` |
-| `boardSize`    | `'tiny' \| 'small' \| 'normal' \| 'large'` | `'normal'`  |
-| `showMover`    | `boolean`                                  | `true`      |
+`generateBoardLatex` is the single-position form. Both accept the layout options from [Document Settings](#document-settings) (`columns`, `documentClass`, `paper`, `fontSize`, `marginMm`, `title`, `documentAuthor`, `numbering`, `pieceCount`, `solutions`) plus `latexPackage`, `mode`, `boardSize`, `showCoords` and `showMover`. A position takes `fen`, `flipped`, `caption`, `author`, `source`, `award`, `stipulation`, `remark`, `solution`, `highlights` and `arrows`.
 
-Also exported: `LATEX_PACKAGES`, `LATEX_PACKAGE_META`, `LATEX_BOARD_SIZES`, `LATEX_BOARD_SIZE_PT`, `isLatexPackage` and `isLatexBoardSize`. The clipboard write reuses the existing `useCopyToClipboard` hook.
+Also exported: `LATEX_PACKAGES`, `LATEX_PACKAGE_META`, `LATEX_BOARD_SIZES`, `LATEX_BOARD_SIZE_PT`, `LATEX_DOCUMENT_CLASSES`, `LATEX_PAPER_SIZES`, `LATEX_FONT_SIZES`, `escapeLatex`, `pieceCounts`, `isLatexPackage` and `isLatexBoardSize`.
 
 ---
 
 ## Entry Points
 
-- **Board editor** — `Copy as LaTeX` in the command bar opens the dialog for the current position
-- **Advanced FEN** — `Copy as LaTeX` under the board preview covers the selected position of the batch
+- **Board editor** — `Open in LaTeX Studio` in the command bar hands over the current position and orientation
+- **Advanced FEN** — `Open in LaTeX Studio` under the board preview hands over every valid position of the batch
+- **History** — `Import from history` on the Positions tab adds saved FENs
 
-Both pass the live board orientation and coordinate setting into the dialog.
+The editor and Advanced FEN pages store the positions in `sessionStorage` (`cv_latex_incoming`) and navigate to `/latex`. The Studio consumes them once on load: a project that still holds only the untouched starting position is replaced, otherwise new positions are appended and duplicates are skipped.
 
 ---
 
 ## File Reference
 
-| File                                                                   | Role                             |
-| ---------------------------------------------------------------------- | -------------------------------- |
-| `@chessviewer-org/chess-viewer` (`src/latex.ts`)                       | Markup generation and validation |
-| `src/components/features/Latex/LatexExportDialog.tsx`                  | Package/mode picker and preview  |
-| `src/components/interactions/Editor/components/CommandBar.tsx`         | Editor entry point               |
-| `src/pages/AdvancedFENInputPage/components/InteractiveBoardColumn.tsx` | Advanced FEN entry point         |
-| `@chessviewer-org/chess-viewer` (`src/latex.test.ts`)                  | Unit tests                       |
+| File                                                                       | Role                                         |
+| -------------------------------------------------------------------------- | -------------------------------------------- |
+| `@chessviewer-org/chess-viewer` (`src/latex-core.ts`, `latex-document.ts`) | Markup generation, escaping and validation   |
+| `src/pages/LatexPage/LatexPage.tsx`                                        | Page shell, tabs and download                |
+| `src/pages/LatexPage/hooks/useLatexProject.ts`                             | Project state, persistence and actions       |
+| `src/pages/LatexPage/utils/latexProject.ts`                                | Project model, parsing, sanitising, build    |
+| `src/pages/LatexPage/components/`                                          | Positions, details, document and code panels |
+| `src/shared/utils/latexHandoff.ts`                                         | sessionStorage hand-off from other pages     |
+| `src/components/interactions/Editor/components/CommandBar.tsx`             | Editor entry point                           |
+| `src/pages/AdvancedFENInputPage/components/InteractiveBoardColumn.tsx`     | Advanced FEN entry point                     |
+| `tests/latexProject.test.ts`                                               | Project, parsing and requirements tests      |
+| `@chessviewer-org/chess-viewer` (`src/latex*.test.ts`)                     | Generator tests                              |

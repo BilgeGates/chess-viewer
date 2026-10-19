@@ -27,6 +27,8 @@ What is built, what is next, and what is not planned. Milestone targets below ar
 - Export pause, resume, and cancel
 - Full-screen Export Studio (board style + export settings in one view)
 - Batch export (Advanced FEN Input) — multiple positions → ZIP download
+- LaTeX Studio (`/latex`) — up to 100 positions → `skak`, `chessboard` or `chess-problem-diagrams`, with problem metadata, solutions, marks, live preview and `.tex` download
+- Book-style hatched dark squares and a black-and-white print theme in every export
 - Copy board to clipboard (PNG)
 
 ### Pages
@@ -37,6 +39,7 @@ What is built, what is next, and what is not planned. Milestone targets below ar
 - Settings page (`/settings`) — appearance, board, account, security, data
 - FEN History page (`/fen-history`) — browsable history with filters and search
 - Advanced FEN Input page (`/advanced-fen`) — batch position editor
+- LaTeX Studio page (`/latex`) — LaTeX documents and problem collections
 - 404 page
 - All pages lazy-loaded with code splitting and hover-prefetch
 
@@ -134,13 +137,13 @@ What is built, what is next, and what is not planned. Milestone targets below ar
 
 Active milestones tracked on the [project board](https://github.com/orgs/chessviewer-org/projects/1):
 
-| Milestone                  | Focus                                                        | Target   |
-| -------------------------- | ------------------------------------------------------------ | -------- |
-| Mobile layout              | Mobile layout fixes across all pages                         | Jul 2026 |
-| Export bugs                | File size estimate, style leak, torn blob, coordinate shift  | Aug 2026 |
-| Runtime & memory           | Race conditions, blob URL leaks, promise rejections          | Aug 2026 |
-| Annotations & new features | Square highlighting, arrows, click-to-place, PGN/embed/LaTeX | Oct 2026 |
-| AI & Import                | Open Folder — FEN extraction from board images               | Nov 2026 |
+| Milestone                  | Focus                                                       | Target   |
+| -------------------------- | ----------------------------------------------------------- | -------- |
+| Mobile layout              | Mobile layout fixes across all pages                        | Jul 2026 |
+| Export bugs                | File size estimate, style leak, torn blob, coordinate shift | Aug 2026 |
+| Runtime & memory           | Race conditions, blob URL leaks, promise rejections         | Aug 2026 |
+| Annotations & new features | Square highlighting, arrows, click-to-place, PGN, embed     | Oct 2026 |
+| AI & Import                | Open Folder — FEN extraction from board images              | Nov 2026 |
 
 ---
 

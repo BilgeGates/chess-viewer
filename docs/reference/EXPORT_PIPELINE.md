@@ -88,17 +88,13 @@ All four presets are well within the 16,384 px Safari canvas limit.
 User triggers export
   → validateExportConfig()        # checks FEN, colours, piece images, board size
   → resetExportState()            # clears cancel/pause flags
-  → createRasterBlob()            # chooses worker or canvas path
-      ├─ [blob URLs present]  → createCanvasRasterBlob()   # main-thread HTMLCanvasElement
-      └─ [CDN URLs only]      → createWorkerRasterBlob()   # SVG → OffscreenCanvas in Worker
+  → createRasterBlob()            # main-thread HTMLCanvasElement via createUltraQualityCanvas()
   → changeDPI()                   # injects DPI metadata into the blob
   → triggerDownload()             # <a download> click
   → canvas.width = 0             # mandatory Safari GPU memory release
 ```
 
-**Worker path** (`createWorkerRasterBlob`): generates an SVG string via `generateBoardSVG()`, sends it to `svgRasterWorker.ts` via `startSvgRasterWorkerTask()`, and receives a PNG/JPEG blob back. The worker uses `OffscreenCanvas` + `createImageBitmap` off the main thread.
-
-**Canvas path** (`createCanvasRasterBlob`): draws directly to a main-thread `HTMLCanvasElement` via `createUltraQualityCanvas()`. Used when piece images are blob URLs (the default case — `pieceImageCache.ts` rasterizes CDN SVGs to 256px blob URLs), because `createImageBitmap` in a worker cannot decode SVG blobs containing embedded `data:image/png` chunks.
+**Canvas path**: `createRasterBlob` draws to a main-thread `HTMLCanvasElement` via `createUltraQualityCanvas()`. An earlier Web Worker path (`svgRasterWorker.ts`, `OffscreenCanvas` + `createImageBitmap`) was removed in October 2026: workers cannot decode SVG blobs with embedded `data:image/png` pieces, so every worker export failed and fell back to the canvas anyway.
 
 ### SVG
 
@@ -191,20 +187,18 @@ Progress is reported per-file and globally across the batch.
 
 ## File Reference
 
-| File                    | Role                                                                                   |
-| ----------------------- | -------------------------------------------------------------------------------------- |
-| `canvasExporter.ts`     | Public API: `downloadPNG`, `downloadJPEG`, `copyToClipboard`                           |
-| `exportRaster.ts`       | `createRasterBlob()` — worker-first, canvas fallback                                   |
-| `canvasRenderer.ts`     | `createUltraQualityCanvas()` — main-thread draw                                        |
-| `exportState.ts`        | `cancelExport`, `pauseExport`, `resumeExport`, `validateExportConfig`, `getExportInfo` |
-| `imageOptimizer.ts`     | `calculateRenderSurfaceSize`, `getMaxCanvasSize`, `estimateFileSizes`                  |
-| `svgExporter.ts`        | `generateBoardSVG`, `downloadSVG`                                                      |
-| `svgPieceLoader.ts`     | `imageToEmbeddableDataURL`, `waitForPieceImage`                                        |
-| `workerRasterExport.ts` | `startSvgRasterWorkerTask`, `isSvgRasterWorkerSupported`                               |
-| `svgRasterWorker.ts`    | Web Worker entry — `createImageBitmap` + `OffscreenCanvas`                             |
-| `dpiEncoder.ts`         | `changeDPI()` — pHYs (PNG) and JFIF (JPEG) metadata injection                          |
-| `archiveManager.ts`     | `compileArchive()` — ZIP from multiple blobs                                           |
-| `pieceImageCache.ts`    | `preloadPieceStyle()` — CDN SVG → 256px blob URL cache                                 |
+| File                 | Role                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| `canvasExporter.ts`  | Public API: `downloadPNG`, `downloadJPEG`, `copyToClipboard`                           |
+| `exportRaster.ts`    | `createRasterBlob()` — main-thread canvas rasterisation                                |
+| `canvasRenderer.ts`  | `createUltraQualityCanvas()` — main-thread draw                                        |
+| `exportState.ts`     | `cancelExport`, `pauseExport`, `resumeExport`, `validateExportConfig`, `getExportInfo` |
+| `imageOptimizer.ts`  | `calculateRenderSurfaceSize`, `getMaxCanvasSize`, `estimateFileSizes`                  |
+| `svgExporter.ts`     | `generateBoardSVG`, `downloadSVG`                                                      |
+| `svgPieceLoader.ts`  | `imageToEmbeddableDataURL`, `waitForPieceImage`                                        |
+| `dpiEncoder.ts`      | `changeDPI()` — pHYs (PNG) and JFIF (JPEG) metadata injection                          |
+| `archiveManager.ts`  | `compileArchive()` — ZIP from multiple blobs                                           |
+| `pieceImageCache.ts` | `preloadPieceStyle()` — CDN SVG → 256px blob URL cache                                 |
 
 ---
 

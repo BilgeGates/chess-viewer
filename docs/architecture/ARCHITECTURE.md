@@ -41,7 +41,7 @@ It parses FEN notation, renders chess positions on an HTML5 Canvas, and exports 
 | Styling         | Tailwind CSS                                                 | 4.x     |
 | Routing         | wouter                                                       | 3.x     |
 | Drag and drop   | Custom hooks (`useDragDrop`) — no library                    | —       |
-| Page animations | CSS keyframes + custom `usePageTransition`                   | —       |
+| Page animations | View Transitions API (`navigateWithTransition`)              | —       |
 | Icons           | Embedded Lucide SVG paths (`src/assets/icons/`) — no package | —       |
 | ZIP export      | fflate                                                       | 0.8.x   |
 | QR codes        | uqr                                                          | 0.1.x   |
@@ -56,9 +56,9 @@ It parses FEN notation, renders chess positions on an HTML5 Canvas, and exports 
 
 > **Supabase client — custom implementation, not `@supabase/supabase-js`** — `src/auth/Supabase.ts` contains a hand-written HTTP client (~940 lines) that covers only the Supabase APIs we use: Auth (sign-in/sign-up/MFA/session management), PostgREST queries, and RPC calls. This avoids the full SDK bundle weight. The `supabase` singleton exported from that file is the only approved entry point for all Supabase access.
 
-> **Page animations — custom CSS, not Framer Motion** — `framer-motion` is not installed. The enter/exit animation system works with CSS `@keyframes` defined in `src/styles/animations.css` and a `usePageTransition` hook that keeps both pages in the DOM simultaneously for 180 ms. The animation class names (`animate-page-enter`, `page-transition-exit`) intentionally mirror the naming style from Framer Motion's AnimatePresence for familiarity.
+> **Page animations — View Transitions API, not Framer Motion** — `framer-motion` is not installed. `src/routes/navigation.ts` passes `navigateWithTransition` to wouter's `<Router aroundNav>`: a navigation that changes the path runs inside `document.startViewTransition`, scrolls the window to the top and cross-fades the old and new page for 180 ms (`::view-transition-old/new(root)` in `theme.css`). It falls back to an instant navigation when the browser lacks the API or the user prefers reduced motion (`canAnimateViewTransition`). The theme toggle reuses the same API with its own circular reveal, scoped by `html[data-theme-transition]`.
 
-> **Chess domain logic — private package** — `@chessviewer-org/chess-viewer` provides `ChessBoard`, `PieceSymbol`, `validateFEN`, `parseFEN`, `boardToFEN`, and related types. It is a private package not published to npm.
+> **Chess domain logic — private package** — `@chessviewer-org/chess-viewer` provides `ChessBoard`, `PieceSymbol`, `validateFEN`, `parseFEN`, `boardToFEN`, and related types. It is published on npm and developed in [chess-viewer-utils](https://github.com/chessviewer-org/chess-viewer-utils); it also generates the SVG diagrams and all LaTeX markup.
 
 ---
 
@@ -101,13 +101,12 @@ src/
 │   │   ├── useFenValidation.ts    # Debounced FEN validation
 │   │   ├── useHomeExport.ts       # Export orchestration for HomePage
 │   │   ├── useInteractiveBoard.ts # Board state + undo/redo + FEN generation
-│   │   ├── useKeyboard.ts         # useEscapeKey, usePageScrollKeys, useEditorKeyboard, useListboxKeyboard
+│   │   ├── useKeyboard.ts         # useEscapeKey, useEditorKeyboard, useListboxKeyboard
 │   │   ├── useLocalStorage.ts     # Debounced localStorage read/write
 │   │   ├── useNotifications.ts    # Toast notification system
 │   │   ├── usePagination.ts       # Generic pagination logic
 │   │   ├── usePiece.ts            # Piece-related helpers
 │   │   ├── usePieceImages.ts      # Piece SVG → HTMLImageElement loading
-│   │   ├── usePrefetchRoute.ts    # Hover-prefetch for page chunks
 │   │   ├── useSearchParams.ts     # URL search param read/write
 │   │   ├── useTheme.ts            # Board colour theme (light/dark squares + presets)
 │   │   └── index.ts               # Barrel re-exports (@hooks alias)
@@ -118,19 +117,19 @@ src/
 │   │   ├── canvasRenderer.ts      # createUltraQualityCanvas() — off-screen draw
 │   │   ├── coordinateCalculations.ts # Square bounds, coordinate label drawing
 │   │   ├── databaseSearch.ts      # Database search API calls
-│   │   ├── exportRaster.ts        # createRasterBlob() — worker-first, canvas fallback
+│   │   ├── exportRaster.ts        # createRasterBlob() — main-thread canvas rasterisation
 │   │   ├── exportState.ts         # Cancel/pause/resume state machine
 │   │   ├── historyUtils.ts        # FEN history filter/sort utilities
 │   │   ├── imageOptimizer.ts      # calculateRenderSurfaceSize, getMaxCanvasSize (Safari cap)
 │   │   ├── logger.ts              # Structured logger (logger.warn/error/info)
-│   │   ├── pageScroll.ts          # getPageViewportHeight, canPageScroll, pageScrollBy…
+│   │   ├── latexHandoff.ts        # sessionStorage hand-off of positions to LaTeX Studio
+│   │   ├── pageScroll.ts          # isTextEntryTarget — keyboard shortcut guard
 │   │   ├── pieceUtils.ts          # Piece image helpers
 │   │   ├── saveBlob.ts            # File download via <a download>
 │   │   ├── svgExporter.ts         # generateBoardSVG(), downloadSVG()
-│   │   ├── svgRasterWorker.ts     # Web Worker: SVG Blob → PNG/JPEG via OffscreenCanvas
+│   │   ├── viewTransition.ts      # canAnimateViewTransition() — API + reduced-motion check
 │   │   ├── syncHydration.ts       # hydrateFromSync() — deferred cloud→localStorage hydration
 │   │   ├── themeMode.ts           # readThemeModePreference, applyThemeMode
-│   │   ├── workerRasterExport.ts  # startSvgRasterWorkerTask() — queues SVG→raster to Worker
 │   │   └── index.ts               # Barrel re-exports (@utils alias)
 │   ├── ui/                        # Reusable UI primitives
 │   │   ├── Checkbox.tsx
@@ -174,6 +173,7 @@ src/
 │   ├── HomePage/                  # Primary board workspace
 │   ├── ExportPage/                # Full-screen export studio (board style + settings)
 │   ├── AdvancedFENInputPage/      # Batch FEN studio — up to 10 positions
+│   ├── LatexPage/                 # LaTeX Studio — up to 100 positions → skak / chessboard / diagram
 │   ├── FENHistoryPage/            # FEN history browser with filters
 │   ├── SettingsPage/              # Settings tabs (appearance, board, account, security)
 │   ├── AboutPage/                 # About sections (FAQ, Privacy, Contribute, Donate)
@@ -181,9 +181,9 @@ src/
 │   └── NotFoundPage.tsx
 │
 ├── routes/
-│   ├── Router.tsx                 # All pages lazy() + Suspense, page transition animations
-│   ├── lazyPages.ts               # Lazy import factories + prefetch registry
-│   └── usePageTransition.ts       # Two-page simultaneous render for enter/exit animations
+│   ├── Router.tsx                 # wouter <Switch> with every route
+│   ├── pages.ts                   # Page component exports
+│   └── navigation.ts              # navigateWithTransition — View Transitions + scroll-to-top
 │
 └── styles/
     ├── animations.css             # @keyframes definitions + .animate-* utility classes
@@ -224,9 +224,9 @@ Convention: use `@/x` for app-structure paths (`@/components`, `@/auth`). Use ba
 
 ## Routing
 
-Routing is handled by **wouter** (not React Router). All routes are in `src/routes/Router.tsx`. Every page is `lazy()`-loaded in a `<Suspense>` boundary.
+Routing is handled by **wouter** (not React Router). All routes are in `src/routes/Router.tsx`; page components are exported from `src/routes/pages.ts`.
 
-Page transitions use a custom `usePageTransition` hook — no Framer Motion. Both the entering and exiting pages are held in the DOM simultaneously for 180 ms while CSS animations run (`animate-page-enter` / `page-transition-exit`).
+Page changes run through `navigateWithTransition` (see Page animations above). The document itself scrolls: `#main-content` is a flex column without its own overflow, so pages size themselves with `flex-1`, sticky elements are positioned against the viewport, and the browser handles Arrow, Page Up/Down, Home, End and Space scrolling natively.
 
 | Path                    | Component              |
 | ----------------------- | ---------------------- |
@@ -236,13 +236,12 @@ Page transitions use a custom `usePageTransition` hook — no Framer Motion. Bot
 | `/settings`             | `SettingsPage`         |
 | `/fen-history`          | `FENHistoryPage`       |
 | `/advanced-fen`         | `AdvancedFENInputPage` |
+| `/latex`                | `LatexPage`            |
 | `/auth/sign-in`         | `SignInPage`           |
 | `/auth/sign-up`         | `SignUpPage`           |
 | `/auth/forgot-password` | `ForgotPasswordPage`   |
 | `/auth/mfa`             | `MfaChallengePage`     |
 | `*`                     | `NotFoundPage`         |
-
-`usePrefetchRoute` prefetches a page chunk on link hover/focus, so click-time navigation is instant.
 
 ---
 

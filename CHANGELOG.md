@@ -23,9 +23,18 @@ linking back to the commit that introduced the change. There are no version tags
 - **db-search:** wire `VITE_DB_SEARCH_PROXY_URL` and `VITE_TURNSTILE_SITE_KEY` into the production build, fixing a 403 caused by the client silently falling back to calling Supabase directly ([#449e640](https://github.com/chessviewer-org/chess-viewer/commit/449e6403))
 - **app:** hydrate the prerendered HTML on load instead of discarding it and re-rendering from scratch, falling back to a plain client render when nothing was prerendered (local dev) ([#9d48b8c](https://github.com/chessviewer-org/chess-viewer/commit/9d48b8ca))
 - **auth:** stop seeding the very first render with a synchronously-read session, which could mismatch the prerendered anonymous markup and crash hydration for signed-in users on a hard refresh ([#60b95b6](https://github.com/chessviewer-org/chess-viewer/commit/60b95b68))
+- **analytics:** load the Cloudflare Web Analytics beacon as an external script from an allowed host, because the CSP blocked Cloudflare's inline bootstrap and analytics never ran; the token comes from `VITE_CF_BEACON_TOKEN` ([#edb6237](https://github.com/chessviewer-org/chess-viewer/commit/edb62376))
+- **pwa:** stop answering every navigation with the cached home shell — prerendered routes are now fetched network-first, so a deep link no longer flashes the home page ([#18eb4a2](https://github.com/chessviewer-org/chess-viewer/commit/18eb4a2d))
+- **boot:** hide prerendered markup that belongs to another route until the client has rendered the right page ([#ad79cf2](https://github.com/chessviewer-org/chess-viewer/commit/ad79cf2f))
+- **hydration:** hydrate only when the prerendered route matches the current URL and fall back to a clean client render otherwise ([#c78b44d](https://github.com/chessviewer-org/chess-viewer/commit/c78b44d6))
+- **hydration:** initialize client-only state such as history, favourites, theme and board size after mount, removing hydration mismatches on every page ([#f1ffb8f](https://github.com/chessviewer-org/chess-viewer/commit/f1ffb8f2))
+- **ui:** keep the theme toggle responsive by flushing the theme change synchronously inside the view transition ([#74fe675](https://github.com/chessviewer-org/chess-viewer/commit/74fe675a))
+- **ui:** render the date picker in a portal and lock page scrolling while a select is open, so menus no longer clip or scroll away ([#59dc02f](https://github.com/chessviewer-org/chess-viewer/commit/59dc02f6))
+- **ui:** improve the mobile layout and touch scrolling of the editor, history filters, export settings and navbar ([#2018959](https://github.com/chessviewer-org/chess-viewer/commit/2018959b))
 
 ### Performance Improvements
 
+- **routing:** render pages eagerly and drop the lazy-loading, prefetch and two-page transition layer, removing the blank frame between routes ([#1fbd051](https://github.com/chessviewer-org/chess-viewer/commit/1fbd0511))
 - **db-search:** cache ChessDB results the same way Lichess results already were, so a repeat search for the same position returns instantly instead of hitting both APIs again ([#d947418](https://github.com/chessviewer-org/chess-viewer/commit/d9474181))
 
 ## August 2026
